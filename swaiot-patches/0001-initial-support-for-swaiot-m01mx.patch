@@ -1,0 +1,957 @@
+From cbb13529cd4c7f9c800633dbbd8d7d3132384840 Mon Sep 17 00:00:00 2001
+From: ghoker143 <ghoker51@protonmail.com>
+Date: Tue, 10 Mar 2026 21:59:58 +0800
+Subject: [PATCH 1/4] initial support for swaiot m01mx
+
+Signed-off-by: ghoker143 <ghoker51@protonmail.com>
+---
+ nss-setup/config-nss.seed                     |   1 +
+ package/firmware/ipq-wifi/Makefile            |   9 +
+ .../ipq-wifi/files/board-swaiot_m01mx.ipq8074 | Bin 0 -> 131176 bytes
+ .../dts/ipq8074-swaiot-m01mx-cpe.dts          | 601 ++++++++++++++++++
+ target/linux/qualcommax/image/ipq807x.mk      |  18 +
+ .../ipq807x/base-files/etc/board.d/02_network |  18 +
+ .../etc/hotplug.d/firmware/11-ath11k-caldata  |   3 +
+ 7 files changed, 650 insertions(+)
+ create mode 100644 package/firmware/ipq-wifi/files/board-swaiot_m01mx.ipq8074
+ create mode 100644 target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
+
+diff --git a/nss-setup/config-nss.seed b/nss-setup/config-nss.seed
+index 65c6970cb2..db8ff67e91 100644
+--- a/nss-setup/config-nss.seed
++++ b/nss-setup/config-nss.seed
+@@ -68,6 +68,7 @@ CONFIG_TARGET_qualcommax_ipq807x=y
+ # CONFIG_TARGET_qualcommax_ipq807x_DEVICE_qnap_301w is not set
+ # CONFIG_TARGET_qualcommax_ipq807x_DEVICE_redmi_ax6 is not set
+ # CONFIG_TARGET_qualcommax_ipq807x_DEVICE_spectrum_sax1v1k is not set
++# CONFIG_TARGET_qualcommax_ipq807x_DEVICE_swaiot_m01mx_cpe is not set
+ # CONFIG_TARGET_qualcommax_ipq807x_DEVICE_tplink_deco-x80-5g is not set
+ # CONFIG_TARGET_qualcommax_ipq807x_DEVICE_tplink_eap620hd-v1 is not set
+ # CONFIG_TARGET_qualcommax_ipq807x_DEVICE_tplink_eap660hd-v1 is not set
+diff --git a/package/firmware/ipq-wifi/Makefile b/package/firmware/ipq-wifi/Makefile
+index 1cdaaf93cb..967335ea9c 100644
+--- a/package/firmware/ipq-wifi/Makefile
++++ b/package/firmware/ipq-wifi/Makefile
+@@ -13,6 +13,13 @@ PKG_FLAGS:=nonshared
+ 
+ include $(INCLUDE_DIR)/package.mk
+ 
++define Build/Prepare
++	$(call Build/Prepare/Default)
++	if [ -d ./files ]; then \
++		$(CP) ./files/board-*.* $(PKG_BUILD_DIR)/ 2>/dev/null || true; \
++	fi
++endef
++
+ define Build/Compile
+ endef
+ 
+@@ -84,6 +91,7 @@ ALLWIFIBOARDS:= \
+ 	redmi_ax6 \
+ 	skspruce_wia3300-20 \
+ 	spectrum_sax1v1k \
++	swaiot_m01mx \
+ 	tcl_linkhub-hh500v \
+ 	tplink_deco-x80-5g \
+ 	tplink_eap610-outdoor \
+@@ -276,6 +284,7 @@ $(eval $(call generate-ipq-wifi-package,prpl_haze,prpl Haze))
+ $(eval $(call generate-ipq-wifi-package,redmi_ax6,Redmi AX6))
+ $(eval $(call generate-ipq-wifi-package,skspruce_wia3300-20,SKSpruce WIA3300-20))
+ $(eval $(call generate-ipq-wifi-package,spectrum_sax1v1k,Spectrum SAX1V1K))
++$(eval $(call generate-ipq-wifi-package,swaiot_m01mx,Swaiot M01MX CPE))
+ $(eval $(call generate-ipq-wifi-package,tcl_linkhub-hh500v,TCL LINKHUB HH500V))
+ $(eval $(call generate-ipq-wifi-package,tplink_deco-x80-5g,TP-Link Deco X80-5G))
+ $(eval $(call generate-ipq-wifi-package,tplink_eap610-outdoor,TPLink EAP610-Outdoor))
+diff --git a/package/firmware/ipq-wifi/files/board-swaiot_m01mx.ipq8074 b/package/firmware/ipq-wifi/files/board-swaiot_m01mx.ipq8074
+new file mode 100644
+index 0000000000000000000000000000000000000000..1fd11f218dce95a83b329742c09db8dc38cc8176
+GIT binary patch
+literal 131176
+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
+zP^|6OgHA$~!X4I$cdq$<cZh3$dHZ_g^LnH?%%0DsmtDMAU$MV?FbiKIkw_#G$)F+`
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
+new file mode 100644
+index 0000000000..6fa3bc8b7d
+--- /dev/null
++++ b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
+@@ -0,0 +1,601 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++/* Copyright (c) 2025, Swaiot-M01MX-CPE */
++
++/dts-v1/;
++
++#include "ipq8074.dtsi"
++#include "ipq8074-ac-cpu.dtsi"
++#include "ipq8074-ess.dtsi"
++#include "ipq8074-nss.dtsi"
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/leds/common.h>
++#include <dt-bindings/net/qcom-ipq-ess.h>
++
++/ {
++	model = "Swaiot-M01MX-CPE IPQ8074/AP-AC02";
++	compatible = "swaiot,m01mx", "qcom,ipq8074-ap-ac02", "qcom,ipq8074";
++
++	aliases {
++		serial0 = &blsp1_uart5;
++		/*
++		 * Aliases as required by u-boot
++		 * to patch MAC addresses
++		 */
++		ethernet0 = &dp5;
++		ethernet1 = &dp4;
++		ethernet2 = &dp3;
++		label-mac-device = &dp5;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++		bootargs-append = " root=/dev/ubiblock0_1 swiotlb=1 coherent_pool=2M";
++	};
++
++	keys {
++		compatible = "gpio-keys";
++		pinctrl-0 = <&button_pins>;
++		pinctrl-names = "default";
++
++		wps {
++			label = "wps";
++			linux,code = <KEY_WPS_BUTTON>;
++			gpios = <&tlmm 50 GPIO_ACTIVE_LOW>;
++		};
++
++		reset {
++			label = "reset";
++			linux,code = <KEY_RESTART>;
++			gpios = <&tlmm 34 GPIO_ACTIVE_LOW>;
++		};
++
++		rfkill {
++			label = "rfkill";
++			linux,code = <KEY_RFKILL>;
++			gpios = <&tlmm 25 GPIO_ACTIVE_LOW>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++		pinctrl-0 = <&led_pins>;
++		pinctrl-names = "default";
++
++		led_4gyellow: 4gyellow {
++			label = "4gyellow";
++			gpios = <&tlmm 42 GPIO_ACTIVE_HIGH>;
++		};
++
++		led_4gblue: 4gblue {
++			label = "4gblue";
++			gpios = <&tlmm 43 GPIO_ACTIVE_HIGH>;
++		};
++
++		led_yellow: yellow {
++			label = "yellow";
++			gpios = <&tlmm 51 GPIO_ACTIVE_HIGH>;
++		};
++
++		led_blue: blue {
++			label = "blue";
++			gpios = <&tlmm 52 GPIO_ACTIVE_HIGH>;
++		};
++
++		led_ethblue: ethblue {
++			label = "ethblue";
++			gpios = <&tlmm 55 GPIO_ACTIVE_HIGH>;
++		};
++
++		led_ethyellow: ethyellow {
++			label = "ethyellow";
++			gpios = <&tlmm 56 GPIO_ACTIVE_HIGH>;
++		};
++
++		led_5gblue: 5gblue {
++			label = "5gblue";
++			gpios = <&tlmm 63 GPIO_ACTIVE_HIGH>;
++		};
++
++		led_5gyellow: 5gyellow {
++			label = "5gyellow";
++			gpios = <&tlmm 64 GPIO_ACTIVE_HIGH>;
++		};
++	};
++
++
++};
++
++&tlmm {
++	mdio_pins: mdio-pins {
++		mdc {
++			pins = "gpio68";
++			function = "mdc";
++			drive-strength = <8>;
++			bias-pull-up;
++		};
++
++		mdio {
++			pins = "gpio69";
++			function = "mdio";
++			drive-strength = <8>;
++			bias-pull-up;
++		};
++	};
++
++	button_pins: button-pins {
++		wps_button {
++			pins = "gpio50";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-up;
++		};
++
++		reset_button {
++			pins = "gpio34";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-up;
++		};
++
++		rfkill_button {
++			pins = "gpio25";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-up;
++		};
++	};
++
++	led_pins: led-pins {
++		led_4gyellow_pin {
++			pins = "gpio42";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		led_4gblue_pin {
++			pins = "gpio43";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		led_yellow_pin {
++			pins = "gpio51";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		led_blue_pin {
++			pins = "gpio52";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		led_ethblue_pin {
++			pins = "gpio55";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		led_ethyellow_pin {
++			pins = "gpio56";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		led_5gblue_pin {
++			pins = "gpio63";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		led_5gyellow_pin {
++			pins = "gpio64";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++	};
++
++	pcie_pins: pcie-pins {
++		pcie0_rst {
++			pins = "gpio58";
++			function = "pcie0_rst";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		pcie0_wake {
++			pins = "gpio59";
++			function = "pcie0_wake";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++	};
++
++	pcie_sdx_gpio: pcie-sdx-gpio {
++		ap2mdm_err_ftl {
++			pins = "gpio27";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		ap2mdm_gp_rst_n {
++			pins = "gpio29";
++			function = "gpio";
++			drive-strength = <8>;
++			output-high;
++		};
++
++		sdx_pon_gpio30 {
++			pins = "gpio30";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-up;
++			output-high;
++		};
++
++		sdx_pon_gpio35 {
++			pins = "gpio35";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-up;
++			output-high;
++		};
++
++		mdm2ap_err_ftl {
++			pins = "gpio33";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++		};
++
++		ap2mdm_status {
++			pins = "gpio26";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-up;
++			output-high;
++		};
++	};
++};
++
++&mdio {
++	status = "okay";
++
++	pinctrl-0 = <&mdio_pins>;
++	pinctrl-names = "default";
++	reset-gpios = <&tlmm 37 GPIO_ACTIVE_LOW>;
++
++	ethernet-phy-package@0 {
++		#address-cells = <1>;
++		#size-cells = <0>;
++		compatible = "qcom,qca8075-package";
++		reg = <0>;
++
++		qca8075_2: ethernet-phy@2 {
++			compatible = "ethernet-phy-ieee802.3-c22";
++			reg = <2>;
++		};
++
++		qca8075_3: ethernet-phy@3 {
++			compatible = "ethernet-phy-ieee802.3-c22";
++			reg = <3>;
++		};
++	};
++
++	qca8081_24: ethernet-phy@24 {
++		compatible = "ethernet-phy-id004d.d101", "ethernet-phy-ieee802.3-c22";
++		reg = <24>;
++		reset-gpios = <&tlmm 48 GPIO_ACTIVE_LOW>;
++		reset-assert-us = <10000>;
++		reset-deassert-us = <20000>;
++		qca,clk-out-frequency = <125000000>;
++		qca,disable-smarteee;
++	};
++};
++
++&blsp1_uart5 {
++	status = "okay";
++};
++
++&cryptobam {
++	status = "okay";
++};
++
++&crypto {
++	status = "okay";
++};
++
++&prng {
++	status = "okay";
++};
++
++&blsp1_spi1 {
++	pinctrl-0 = <&spi_0_pins>;
++	pinctrl-names = "default";
++	status = "okay";
++
++	flash@0 {
++		reg = <0>;
++		/*
++		 * Some Qualcomm bootloader paths look for the legacy compatible.
++		 */
++		linux,modalias = "m25p80", "n25q128a11";
++		compatible = "micron,n25q128a11", "jedec,spi-nor";
++		spi-max-frequency = <50000000>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "0:sbl1";
++				reg = <0x0 0x50000>;
++				read-only;
++			};
++
++			partition@50000 {
++				label = "0:mibib";
++				reg = <0x50000 0x10000>;
++				read-only;
++			};
++
++			partition@60000 {
++				label = "0:bootconfig";
++				reg = <0x60000 0x20000>;
++				read-only;
++			};
++
++			partition@80000 {
++				label = "0:bootconfig1";
++				reg = <0x80000 0x20000>;
++				read-only;
++			};
++
++			partition@a0000 {
++				label = "0:qsee";
++				reg = <0xa0000 0x180000>;
++				read-only;
++			};
++
++			partition@220000 {
++				label = "0:qsee_1";
++				reg = <0x220000 0x180000>;
++				read-only;
++			};
++
++			partition@3a0000 {
++				label = "0:devcfg";
++				reg = <0x3a0000 0x10000>;
++				read-only;
++			};
++
++			partition@3b0000 {
++				label = "0:devcfg_1";
++				reg = <0x3b0000 0x10000>;
++				read-only;
++			};
++
++			partition@3c0000 {
++				label = "0:apdp";
++				reg = <0x3c0000 0x10000>;
++				read-only;
++			};
++
++			partition@3d0000 {
++				label = "0:apdp_1";
++				reg = <0x3d0000 0x10000>;
++				read-only;
++			};
++
++			partition@3e0000 {
++				label = "0:rpm";
++				reg = <0x3e0000 0x40000>;
++				read-only;
++			};
++
++			partition@420000 {
++				label = "0:rpm_1";
++				reg = <0x420000 0x40000>;
++				read-only;
++			};
++
++			partition@460000 {
++				label = "0:cdt";
++				reg = <0x460000 0x10000>;
++				read-only;
++			};
++
++			partition@470000 {
++				label = "0:cdt_1";
++				reg = <0x470000 0x10000>;
++				read-only;
++			};
++
++			partition@480000 {
++				label = "0:appsblenv";
++				reg = <0x480000 0x10000>;
++
++				nvmem-layout {
++					compatible = "u-boot,env";
++
++					macaddr_appsblenv_ethaddr: ethaddr {
++						#nvmem-cell-cells = <1>;
++					};
++				};
++			};
++
++			partition@490000 {
++				label = "0:appsbl";
++				reg = <0x490000 0xa0000>;
++				read-only;
++			};
++
++			partition@530000 {
++				label = "0:appsbl_1";
++				reg = <0x530000 0xa0000>;
++				read-only;
++			};
++
++			partition@5d0000 {
++				label = "0:art";
++				reg = <0x5d0000 0x40000>;
++				read-only;
++			};
++
++			partition@610000 {
++				label = "0:ethphyfw";
++				reg = <0x610000 0x80000>;
++				read-only;
++			};
++
++			partition@690000 {
++				label = "ledeinfo";
++				reg = <0x690000 0x10000>;
++			};
++
++			partition@6a0000 {
++				label = "reserve";
++				reg = <0x6a0000 0x10000>;
++			};
++		};
++	};
++};
++
++&qpic_bam {
++	status = "okay";
++};
++
++&qpic_nand {
++	status = "okay";
++
++	nand@0 {
++		reg = <0>;
++		nand-ecc-strength = <4>;
++		nand-ecc-step-size = <512>;
++		nand-bus-width = <8>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "rootfs";
++				reg = <0x0 0xf700000>;
++			};
++
++			partition@f700000 {
++				label = "0:wififw";
++				reg = <0xf700000 0x800000>;
++			};
++		};
++	};
++};
++
++&qusb_phy_0 {
++	status = "okay";
++};
++
++&qusb_phy_1 {
++	status = "okay";
++};
++
++&ssphy_0 {
++	status = "okay";
++};
++
++&ssphy_1 {
++	status = "okay";
++};
++
++&usb_0 {
++	status = "okay";
++};
++
++&usb_1 {
++	status = "okay";
++};
++
++&switch {
++	status = "okay";
++
++	switch_lan_bmp = <(ESS_PORT3 | ESS_PORT4)>; /* LAN ports: 3,4 */
++	switch_wan_bmp = <ESS_PORT5>; /* WAN port: 5 */
++	switch_mac_mode = <MAC_MODE_PSGMII>; /* uniphy0 */
++	switch_mac_mode1 = <MAC_MODE_SGMII_CHANNEL0>; /* uniphy1 */
++	switch_mac_mode2 = <MAC_MODE_SGMII_CHANNEL0>; /* uniphy2 */
++
++	qcom,port_phyinfo {
++		port@3 {
++			port_id = <3>;
++			phy_address = <2>;
++		};
++		port@4 {
++			port_id = <4>;
++			phy_address = <3>;
++		};
++		port@5 {
++			port_id = <5>;
++			phy_address = <24>;
++			port_mac_sel = "QGMAC_PORT";
++		};
++	};
++};
++
++&edma {
++	status = "okay";
++};
++
++&dp3 {
++	status = "okay";
++	phy-handle = <&qca8075_2>;
++	label = "lan1";
++};
++
++&dp4 {
++	status = "okay";
++	phy-handle = <&qca8075_3>;
++	label = "lan2";
++};
++
++&dp5 {
++	status = "okay";
++	phy-handle = <&qca8081_24>;
++	label = "wan";
++};
++
++&wifi {
++	status = "okay";
++
++	qcom,ath11k-fw-memory-mode = <1>;
++	qcom,ath11k-calibration-variant = "Swaiot-M01MX";
++//	nvmem-cells = <&caldata_ath11k>;
++//	nvmem-cell-names = "calibration";
++	qcom,board_id = <0xff>;
++};
++
++&pcie_qmp0 {
++	status = "okay";
++};
++
++&pcie0 {
++	status = "okay";
++
++	pinctrl-0 = <&pcie_pins &pcie_sdx_gpio>;
++	pinctrl-names = "default";
++	perst-gpios = <&tlmm 58 GPIO_ACTIVE_LOW>;
++	wake-gpios = <&tlmm 33 GPIO_ACTIVE_LOW>;
++	max-link-speed = <2>; /* Gen2 */
++	link-retries = <100>;
++};
+diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/image/ipq807x.mk
+index c3ce4993f7..e47f825805 100644
+--- a/target/linux/qualcommax/image/ipq807x.mk
++++ b/target/linux/qualcommax/image/ipq807x.mk
+@@ -446,6 +446,24 @@ define Device/spectrum_sax1v1k
+ endef
+ TARGET_DEVICES += spectrum_sax1v1k
+ 
++define Device/swaiot_m01mx_cpe
++	$(call Device/FitImage)
++	$(call Device/UbiFit)
++	DEVICE_VENDOR := Swaiot
++	DEVICE_MODEL := M01MX CPE
++	BLOCKSIZE := 128k
++	PAGESIZE := 2048
++	DEVICE_DTS := ipq8074-swaiot-m01mx-cpe
++	DEVICE_DTS_CONFIG := config@swaiot.m01mx
++	SOC := ipq8074
++	DEVICE_PACKAGES := kmod-usb-serial-option kmod-usb-net-qmi-wwan \
++		kmod-mhi-bus kmod-mhi-pci-generic kmod-wwan \
++		kmod-mhi-wwan-ctrl kmod-mhi-wwan-mbim \
++		wwan umbim \
++		ipq-wifi-swaiot_m01mx
++endef
++TARGET_DEVICES += swaiot_m01mx_cpe
++
+ define Device/tcl_linkhub-hh500v
+ 	$(call Device/FitImage)
+ 	$(call Device/UbiFit)
+diff --git a/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network b/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
+index 392afed177..35c78d5d91 100644
+--- a/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
++++ b/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
+@@ -67,6 +67,9 @@ ipq807x_setup_interfaces()
+ 	qnap,301w)
+ 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4 10g-2" "10g-1"
+ 		;;
++	swaiot,m01mx)
++		ucidef_set_interfaces_lan_wan "lan1 lan2" "wan"
++		;;
+ 	tplink,eap620hd-v1|\
+ 	tplink,eap660hd-v1)
+ 		ucidef_set_interface_lan "lan" "dhcp"
+@@ -92,6 +95,7 @@ ipq807x_setup_macs()
+ 	local lan_mac=""
+ 	local wan_mac=""
+ 	local label_mac=""
++	local ledeinfo_part=""
+ 
+ 	case "$board" in
+ 	aliyun,ap8220)
+@@ -99,6 +103,20 @@ ipq807x_setup_macs()
+ 		lan_mac=$(macaddr_add "$wan_mac" 1)
+ 		label_mac="$wan_mac"
+ 		;;
++	swaiot,m01mx)
++		ledeinfo_part=$(
++			awk '
++				$2 == "00010000" && $4 == "\"ledeinfo\"" {
++					sub(/:$/, "", $1);
++					print "/dev/mtdblock" substr($1, 4);
++					exit;
++				}
++			' /proc/mtd
++		)
++		[ -n "$ledeinfo_part" ] && wan_mac=$(get_mac_binary "$ledeinfo_part" 0x18)
++		[ -n "$wan_mac" ] && lan_mac=$(macaddr_add "$wan_mac" 1)
++		label_mac="$wan_mac"
++		;;
+ 	tcl,linkhub-hh500v)
+ 		wan_mac=$(mtd_get_mac_binary "0:ART" 0x5e290)
+ 		lan_mac=$(mtd_get_mac_binary "0:ART" 0x5e296)
+diff --git a/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata b/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
+index a93f1fcd1e..157e79be21 100644
+--- a/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
++++ b/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
+@@ -101,6 +101,9 @@ case "$FIRMWARE" in
+ 		ath11k_patch_mac $(macaddr_add $label_mac 33) 2
+ 		ath11k_set_macflag
+ 		;;
++	swaiot,m01mx)
++		caldata_extract "0:art" 0x1000 0x20000
++		;;
+ 	prpl,haze|\
+ 	spectrum,sax1v1k)
+ 		caldata_extract_mmc "0:ART" 0x1000 0x20000
+-- 
+2.53.0
+

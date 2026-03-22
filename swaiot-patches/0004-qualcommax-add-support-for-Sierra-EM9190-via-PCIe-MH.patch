@@ -1,0 +1,176 @@
+From 442012d7a73f41191925a2dc3807c679fb23a02d Mon Sep 17 00:00:00 2001
+From: ghoker143 <ghoker51@protonmail.com>
+Date: Sun, 22 Mar 2026 14:34:30 +0800
+Subject: [PATCH 4/4] =?UTF-8?q?qualcommax:=20add=20support=20for=20Sierra?=
+ =?UTF-8?q?=20EM9190=20via=20PCIe/MHI=20(QMI=20mux=20path)=20This=20commit?=
+ =?UTF-8?q?=20introduces=20a=20localized=20workaround=20patchset=20to=20fu?=
+ =?UTF-8?q?lly=20enable=20the=20Sierra=20Wireless=20EM9190=205G=20module?=
+ =?UTF-8?q?=20over=20the=20PCIe/MHI=20interface=20on=20the=20qualcommax=20?=
+ =?UTF-8?q?platform=20using=20the=20QMI=20multiplexing=20data=20path.=20No?=
+ =?UTF-8?q?te=20that=20this=20QMI=20implementation=20path=20is=20highly=20?=
+ =?UTF-8?q?platform-specific=20and=20depends=20on=20the=20hardware's=20PCI?=
+ =?UTF-8?q?e=20enumeration.=20It=20includes:=201.=20Kernel=20Patch=20(999-?=
+ =?UTF-8?q?mhi-em9190-sierra-fix.patch):=20=20=20=20-=20Maps=20the=20speci?=
+ =?UTF-8?q?fic=20PCI=20IDs=20of=20this=20EM9190=20batch=20to=20the=20gener?=
+ =?UTF-8?q?ic=20=20=20=20=20=20Sierra=20MHI=20profile.=20=20=20=20-=20?=
+ =?UTF-8?q?=E2=9A=A0=EF=B8=8F=20MUST=20BE=20EVALUATED=20per=20hardware=20b?=
+ =?UTF-8?q?atch,=20as=20it=20relies=20on=20specific=20=20=20=20=20=20PCIe?=
+ =?UTF-8?q?=20enumerations=20which=20may=20vary=20across=20different=20EM9?=
+ =?UTF-8?q?190=20SKUs.=202.=20Netifd=20Core=20Fix=20(0001-device-skip-vlan?=
+ =?UTF-8?q?-parse-if-ifname-already-exists.patch):=20=20=20=20-=20Already?=
+ =?UTF-8?q?=20submitted=20upstream.=20Prevents=20netifd=20from=20misidenti?=
+ =?UTF-8?q?fying=20=20=20=20=20=20valid=20dotted=20kernel=20interfaces=20(?=
+ =?UTF-8?q?like=20`qmapmux0.0`)=20as=20VLANs.=203.=20ModemManager=20Overri?=
+ =?UTF-8?q?de=20(feed=5Fpatches/0005-bearer-qmi-default-multiplex-requeste?=
+ =?UTF-8?q?d-for-mhi-net.patch):=20=20=20=20-=20Sets=20the=20default=20mul?=
+ =?UTF-8?q?tiplex=20policy=20to=20REQUESTED=20for=20`mhi=5Fnet`=20=20=20?=
+ =?UTF-8?q?=20=20=20drivers=20to=20gracefully=20handle=20existing=20QMAP?=
+ =?UTF-8?q?=20connections.=20=20=20=20-=20=E2=9A=A0=EF=B8=8F=20This=20is?=
+ =?UTF-8?q?=20a=20feed=20override=20patch.=20It=20must=20be=20manually=20c?=
+ =?UTF-8?q?opied=20to=20=20=20=20=20=20`feeds/packages/net/modemmanager/pa?=
+ =?UTF-8?q?tches/`=20before=20running=20=20=20=20=20=20`make=20package/fee?=
+ =?UTF-8?q?ds/packages/modemmanager/compile`.?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: ghoker143 <ghoker51@protonmail.com>
+---
+ ...ault-multiplex-requested-for-mhi-net.patch | 35 +++++++++++
+ ...-vlan-parse-if-ifname-already-exists.patch | 58 +++++++++++++++++++
+ .../999-mhi-em9190-sierra-fix.patch           | 16 +++++
+ 3 files changed, 109 insertions(+)
+ create mode 100644 feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch
+ create mode 100644 package/network/config/netifd/patches/0001-device-skip-vlan-parse-if-ifname-already-exists.patch
+ create mode 100644 target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-fix.patch
+
+diff --git a/feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch b/feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch
+new file mode 100644
+index 0000000000..10e4bb88c4
+--- /dev/null
++++ b/feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch
+@@ -0,0 +1,35 @@
++From 2222222222222222222222222222222222222222 Mon Sep 17 00:00:00 2001
++From: ghoker143 <ghoker51@protonmail.com>
++Date: Sun, 22 Mar 2026 12:35:00 +0800
++Subject: [PATCH] bearer-qmi: default to multiplex=requested for mhi_net data ports
++
++When no multiplex setting is given by the user, ModemManager currently
++defaults to MM_BEARER_MULTIPLEX_SUPPORT_NONE for all non-IPA data port
++drivers.  For PCIe modems using the mhi_net driver, however, the kernel
++rmnet/MHI stack negotiates a QMAP aggregation protocol (QMAPv4 or v5)
++during QMI WDA port setup.  Attempting to connect with multiplex=none
++then fails immediately because the modem firmware cannot revert the
++already-established QMAP session:
++
++  Failed to connect: Unsupported: Cannot disable multiplex support
++
++This affects all QMI-capable PCIe modems using mhi_net (Qualcomm SDX55,
++SDX62, SDX75 based modules such as Sierra Wireless EM9190, FM350, etc.).
++
++When the data port driver is "mhi_net" and the user has not specified a
++multiplex preference, default to MM_BEARER_MULTIPLEX_SUPPORT_REQUESTED.
++REQUESTED (not REQUIRED as used for IPA) is chosen so that the connection
++can still succeed gracefully in the unlikely event that QMAP is unavailable
++on a particular mhi_net device.
++---
++--- a/src/mm-bearer-qmi.c
+++++ b/src/mm-bearer-qmi.c
++@@ -2443,6 +2443,8 @@
++             ctx->multiplex = MM_BEARER_MULTIPLEX_SUPPORT_REQUESTED;
++         else if (!g_strcmp0 (data_port_driver, "ipa"))
++             ctx->multiplex = MM_BEARER_MULTIPLEX_SUPPORT_REQUIRED;
+++        else if (!g_strcmp0 (data_port_driver, "mhi_net"))
+++            ctx->multiplex = MM_BEARER_MULTIPLEX_SUPPORT_REQUESTED;
++         else
++             ctx->multiplex = MM_BEARER_MULTIPLEX_SUPPORT_NONE;
++     }
+diff --git a/package/network/config/netifd/patches/0001-device-skip-vlan-parse-if-ifname-already-exists.patch b/package/network/config/netifd/patches/0001-device-skip-vlan-parse-if-ifname-already-exists.patch
+new file mode 100644
+index 0000000000..4e8db19e08
+--- /dev/null
++++ b/package/network/config/netifd/patches/0001-device-skip-vlan-parse-if-ifname-already-exists.patch
+@@ -0,0 +1,58 @@
++From 1111111111111111111111111111111111111111 Mon Sep 17 00:00:00 2001
++From: ghoker143 <ghoker51@protonmail.com>
++Date: Sun, 22 Mar 2026 12:30:00 +0800
++Subject: [PATCH] device: skip VLAN chain lookup for existing kernel interfaces
++
++netifd's __device_get() treats any interface name containing a '.' as a
++VLAN-style device by immediately dispatching to get_vlan_device_chain().
++This assumption dates from the era when only kernel "eth0.X" VLAN devices
++had dots in their names.
++
++Modern externally-managed interfaces such as the rmnet mux links created
++by ModemManager for QMI QMAP multiplexing (e.g. qmapmux0.0, qmapmux0.1)
++are legitimate kernel netdevices that happen to contain a dot.  When
++ModemManager calls notify_proto with such an ifname, netifd incorrectly
++tries to resolve it as a VLAN device:
++
++  ubus call network.device status '{"name":"qmapmux0.0"}'
++  => { "type": "VLAN", "present": false }
++
++This causes notify_proto to fail with "Unknown error" and the interface
++never comes up under netifd control.
++
++Fix: before dispatching to get_vlan_device_chain(), probe the kernel with
++if_nametoindex().  If the full dotted name already exists as a real netdev,
++skip the VLAN path and fall through to the normal device lookup / creation
++path.  This preserves all existing VLAN behaviour: when eth0.10 does not
++yet exist in the kernel, if_nametoindex("eth0.10") returns 0 and netifd
++still creates it as a VLAN device as before.
++---
++--- a/device.c
+++++ b/device.c
++@@ -14,6 +14,7 @@
++ #include <string.h>
++ #include <stdlib.h>
++ #include <stdio.h>
+++#include <net/if.h>
++ #include <assert.h>
++ 
++ #include <sys/types.h>
++@@ -893,8 +894,16 @@
++ 
++ 	dev = avl_find_element(&devices, name, dev, avl);
++ 
++-	if (!dev && check_vlan && strchr(name, '.'))
++-		return get_vlan_device_chain(name, create);
+++	if (!dev && check_vlan && strchr(name, '.')) {
+++		/*
+++		 * Only treat dotted names as VLAN-style if the full name does
+++		 * NOT already exist as a real kernel netdev.  Externally managed
+++		 * interfaces (e.g. ModemManager QMI mux links: qmapmux0.0) are
+++		 * valid kernel devices whose names happen to contain a dot.
+++		 */
+++		if (!if_nametoindex(name))
+++			return get_vlan_device_chain(name, create);
+++	}
++ 
++ 	if (name[0] == '@')
++ 		return device_alias_get(name + 1);
+diff --git a/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-fix.patch b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-fix.patch
+new file mode 100644
+index 0000000000..442328ee60
+--- /dev/null
++++ b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-fix.patch
+@@ -0,0 +1,16 @@
++--- a/drivers/bus/mhi/host/pci_generic.c
+++++ b/drivers/bus/mhi/host/pci_generic.c
++@@ -782,7 +782,11 @@
++ 	{ PCI_DEVICE(PCI_VENDOR_ID_QCOM, 0x0304),
++ 		.driver_data = (kernel_ulong_t) &mhi_qcom_sdx24_info },
++-	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, PCI_VENDOR_ID_QCOM, 0x010c),
++-		.driver_data = (kernel_ulong_t) &mhi_foxconn_sdx55_info },
+++	/* Sierra Wireless EM9190 with GENERIC firmware reports same
+++	 * subsystem ID as Foxconn SDX55 (17cb:010c). Use sierra_em919x
+++	 * config (3 event rings, 4 MSI) to avoid broken 5th MSI vector
+++	 * on GICv2m platforms (e.g. IPQ807x). */
+++	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, PCI_VENDOR_ID_QCOM, 0x010c),
+++		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_info },
++ 	/* EM919x (sdx55), use the same vid:pid as qcom-sdx55m */
++ 	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, 0x18d7, 0x0200),
++ 		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_info },
+-- 
+2.53.0
+

@@ -1,0 +1,58 @@
+From b2265ef454afb6cefee8131421ef03f67c01ff05 Mon Sep 17 00:00:00 2001
+From: ghoker143 <ghoker51@protonmail.com>
+Date: Wed, 11 Mar 2026 00:10:31 +0800
+Subject: [PATCH 2/4] fix ecc in nand
+
+Signed-off-by: ghoker143 <ghoker51@protonmail.com>
+---
+ target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts     | 5 ++++-
+ target/linux/qualcommax/image/ipq807x.mk                     | 1 +
+ .../qualcommax/ipq807x/base-files/lib/upgrade/platform.sh    | 1 +
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
+index 6fa3bc8b7d..9697eff7de 100644
+--- a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
++++ b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
+@@ -478,10 +478,13 @@
+ 
+ &qpic_nand {
+ 	status = "okay";
++	compatible = "qcom,ebi2-nandc-bam-v1.5.0", "qcom,ipq8074-nand";
+ 
+ 	nand@0 {
++		#address-cells = <1>;
++		#size-cells = <1>;
+ 		reg = <0>;
+-		nand-ecc-strength = <4>;
++		nand-ecc-strength = <8>;
+ 		nand-ecc-step-size = <512>;
+ 		nand-bus-width = <8>;
+ 
+diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/image/ipq807x.mk
+index e47f825805..bb3b0a4e6d 100644
+--- a/target/linux/qualcommax/image/ipq807x.mk
++++ b/target/linux/qualcommax/image/ipq807x.mk
+@@ -453,6 +453,7 @@ define Device/swaiot_m01mx_cpe
+ 	DEVICE_MODEL := M01MX CPE
+ 	BLOCKSIZE := 128k
+ 	PAGESIZE := 2048
++	SUPPORTED_DEVICES := swaiot,m01mx
+ 	DEVICE_DTS := ipq8074-swaiot-m01mx-cpe
+ 	DEVICE_DTS_CONFIG := config@swaiot.m01mx
+ 	SOC := ipq8074
+diff --git a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
+index 9bece63345..ead93450ae 100644
+--- a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
++++ b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
+@@ -187,6 +187,7 @@ platform_do_upgrade() {
+ 	netgear,wax218|\
+ 	netgear,wax620|\
+ 	netgear,wax630|\
++	swaiot,m01mx|\
+ 	zyxel,nwa110ax|\
+ 	zyxel,nwa210ax)
+ 		nand_do_upgrade "$1"
+-- 
+2.53.0
+
