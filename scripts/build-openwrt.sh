@@ -22,10 +22,13 @@ OPENWRT_REF="${OPENWRT_REF:-main-nss}"
 OPENWRT_DIR="${OPENWRT_DIR:-$ROOT_DIR/workdir/openwrt}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-$ROOT_DIR/artifacts}"
 PATCH_DIR="$ROOT_DIR/swaiot-patches"
-DEVICE_CONFIG="$ROOT_DIR/.config"
+SEED_CONFIG_REL="${SEED_CONFIG_REL:-nss-setup/config-nss.seed}"
+DEVICE_CONFIG_FRAGMENT="${DEVICE_CONFIG_FRAGMENT:-$ROOT_DIR/configs/device.config}"
+EXTRA_CONFIG_FRAGMENT="${EXTRA_CONFIG_FRAGMENT:-$ROOT_DIR/configs/extra.config}"
 JOBS="${JOBS:-$(nproc)}"
 
-require_file "$DEVICE_CONFIG"
+require_file "$DEVICE_CONFIG_FRAGMENT"
+require_file "$EXTRA_CONFIG_FRAGMENT"
 [[ -d "$PATCH_DIR" ]] || die "Patch directory not found: $PATCH_DIR"
 
 shopt -s nullglob
@@ -63,8 +66,13 @@ for patch_file in "${PATCH_FILES[@]}"; do
   fi
 done
 
-log "Copying device config"
-cp "$DEVICE_CONFIG" "$OPENWRT_DIR/.config"
+SEED_CONFIG="$OPENWRT_DIR/$SEED_CONFIG_REL"
+require_file "$SEED_CONFIG"
+
+log "Preparing build config from upstream seed and local fragments"
+cp "$SEED_CONFIG" "$OPENWRT_DIR/.config"
+printf '\n# Device fragment\n' >> "$OPENWRT_DIR/.config"
+cat "$DEVICE_CONFIG_FRAGMENT" >> "$OPENWRT_DIR/.config"
 
 log "Updating feeds"
 "$OPENWRT_DIR/scripts/feeds" update -a
@@ -78,6 +86,10 @@ require_file "$MODEMMANAGER_PATCH"
 mkdir -p "$MODEMMANAGER_PATCH_DIR"
 log "Installing ModemManager feed patch"
 cp "$MODEMMANAGER_PATCH" "$MODEMMANAGER_PATCH_DIR/"
+
+log "Appending custom fragment after feeds are available"
+printf '\n# Custom fragment\n' >> "$OPENWRT_DIR/.config"
+cat "$EXTRA_CONFIG_FRAGMENT" >> "$OPENWRT_DIR/.config"
 
 log "Running defconfig"
 make -C "$OPENWRT_DIR" defconfig
@@ -103,6 +115,9 @@ openwrt_repo=$OPENWRT_REPO
 openwrt_ref=$OPENWRT_REF
 openwrt_commit=$(git -C "$OPENWRT_DIR" rev-parse HEAD)
 patches_applied=$(printf '%s ' "${PATCH_FILES[@]##*/}" | sed 's/[[:space:]]*$//')
+seed_config=$SEED_CONFIG_REL
+device_fragment=$(basename "$DEVICE_CONFIG_FRAGMENT")
+extra_fragment=$(basename "$EXTRA_CONFIG_FRAGMENT")
 jobs=$JOBS
 EOF
 

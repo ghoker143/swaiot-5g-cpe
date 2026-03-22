@@ -103,7 +103,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.OPENWRT_DIR }}/dl
-          key: openwrt-dl-${{ env.OPENWRT_REF }}-${{ hashFiles('.config', 'swaiot-patches/*.patch') }}
+          key: openwrt-dl-${{ env.OPENWRT_REF }}-${{ hashFiles('configs/*.config', 'swaiot-patches/*.patch') }}
           restore-keys: |
             openwrt-dl-${{ env.OPENWRT_REF }}-
 
@@ -111,7 +111,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ccache
-          key: openwrt-ccache-${{ runner.os }}-${{ env.OPENWRT_REF }}-${{ hashFiles('.config', 'swaiot-patches/*.patch') }}
+          key: openwrt-ccache-${{ runner.os }}-${{ env.OPENWRT_REF }}-${{ hashFiles('configs/*.config', 'swaiot-patches/*.patch') }}
           restore-keys: |
             openwrt-ccache-${{ runner.os }}-${{ env.OPENWRT_REF }}-
 
