@@ -40,6 +40,10 @@ mkdir -p "$(dirname "$OPENWRT_DIR")" "$ARTIFACT_DIR"
 log "Cloning $OPENWRT_REPO ($OPENWRT_REF)"
 git clone --branch "$OPENWRT_REF" --depth 1 "$OPENWRT_REPO" "$OPENWRT_DIR"
 
+log "Configuring local git identity for patch application"
+git -C "$OPENWRT_DIR" config user.name "${GIT_COMMITTER_NAME:-github-ci}"
+git -C "$OPENWRT_DIR" config user.email "${GIT_COMMITTER_EMAIL:-github-ci@github}"
+
 cleanup_git_am() {
   if git -C "$OPENWRT_DIR" rev-parse --git-path rebase-apply >/dev/null 2>&1; then
     if [[ -d "$(git -C "$OPENWRT_DIR" rev-parse --git-path rebase-apply)" ]]; then
