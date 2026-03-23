@@ -264,7 +264,7 @@ new file mode 100644
 index 0000000000..6fa3bc8b7d
 --- /dev/null
 +++ b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
-@@ -0,0 +1,601 @@
+@@ -0,0 +1,599 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 +/* Copyright (c) 2025, Swaiot-M01MX-CPE */
 +
@@ -863,8 +863,6 @@ index 0000000000..6fa3bc8b7d
 +	pinctrl-names = "default";
 +	perst-gpios = <&tlmm 58 GPIO_ACTIVE_LOW>;
 +	wake-gpios = <&tlmm 33 GPIO_ACTIVE_LOW>;
-+	max-link-speed = <2>; /* Gen2 */
-+	link-retries = <100>;
 +};
 diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/image/ipq807x.mk
 index c3ce4993f7..e47f825805 100644
