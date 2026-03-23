@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout CI repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install build dependencies
         run: |
@@ -39,7 +39,6 @@ jobs:
             binutils \
             bison \
             build-essential \
-            ccache \
             clang \
             cmake \
             cpio \
@@ -100,27 +99,19 @@ jobs:
             zlib1g-dev
 
       - name: Restore dl cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.OPENWRT_DIR }}/dl
           key: openwrt-dl-${{ env.OPENWRT_REF }}-${{ hashFiles('configs/*.config', 'swaiot-patches/*.patch') }}
           restore-keys: |
             openwrt-dl-${{ env.OPENWRT_REF }}-
 
-      - name: Restore ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: openwrt-ccache-${{ runner.os }}-${{ env.OPENWRT_REF }}-${{ hashFiles('configs/*.config', 'swaiot-patches/*.patch') }}
-          restore-keys: |
-            openwrt-ccache-${{ runner.os }}-${{ env.OPENWRT_REF }}-
-
       - name: Build firmware
         run: ./scripts/build-openwrt.sh
 
       - name: Upload firmware artifacts
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: swaiot-m01mx-openwrt-${{ github.run_number }}
           path: ${{ env.ARTIFACT_DIR }}

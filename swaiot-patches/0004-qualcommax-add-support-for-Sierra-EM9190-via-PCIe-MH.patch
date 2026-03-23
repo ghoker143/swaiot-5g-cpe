@@ -1,35 +1,7 @@
 From 442012d7a73f41191925a2dc3807c679fb23a02d Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
 Date: Sun, 22 Mar 2026 14:34:30 +0800
-Subject: [PATCH 4/4] =?UTF-8?q?qualcommax:=20add=20support=20for=20Sierra?=
- =?UTF-8?q?=20EM9190=20via=20PCIe/MHI=20(QMI=20mux=20path)=20This=20commit?=
- =?UTF-8?q?=20introduces=20a=20localized=20workaround=20patchset=20to=20fu?=
- =?UTF-8?q?lly=20enable=20the=20Sierra=20Wireless=20EM9190=205G=20module?=
- =?UTF-8?q?=20over=20the=20PCIe/MHI=20interface=20on=20the=20qualcommax=20?=
- =?UTF-8?q?platform=20using=20the=20QMI=20multiplexing=20data=20path.=20No?=
- =?UTF-8?q?te=20that=20this=20QMI=20implementation=20path=20is=20highly=20?=
- =?UTF-8?q?platform-specific=20and=20depends=20on=20the=20hardware's=20PCI?=
- =?UTF-8?q?e=20enumeration.=20It=20includes:=201.=20Kernel=20Patch=20(999-?=
- =?UTF-8?q?mhi-em9190-sierra-fix.patch):=20=20=20=20-=20Maps=20the=20speci?=
- =?UTF-8?q?fic=20PCI=20IDs=20of=20this=20EM9190=20batch=20to=20the=20gener?=
- =?UTF-8?q?ic=20=20=20=20=20=20Sierra=20MHI=20profile.=20=20=20=20-=20?=
- =?UTF-8?q?=E2=9A=A0=EF=B8=8F=20MUST=20BE=20EVALUATED=20per=20hardware=20b?=
- =?UTF-8?q?atch,=20as=20it=20relies=20on=20specific=20=20=20=20=20=20PCIe?=
- =?UTF-8?q?=20enumerations=20which=20may=20vary=20across=20different=20EM9?=
- =?UTF-8?q?190=20SKUs.=202.=20Netifd=20Core=20Fix=20(0001-device-skip-vlan?=
- =?UTF-8?q?-parse-if-ifname-already-exists.patch):=20=20=20=20-=20Already?=
- =?UTF-8?q?=20submitted=20upstream.=20Prevents=20netifd=20from=20misidenti?=
- =?UTF-8?q?fying=20=20=20=20=20=20valid=20dotted=20kernel=20interfaces=20(?=
- =?UTF-8?q?like=20`qmapmux0.0`)=20as=20VLANs.=203.=20ModemManager=20Overri?=
- =?UTF-8?q?de=20(feed=5Fpatches/0005-bearer-qmi-default-multiplex-requeste?=
- =?UTF-8?q?d-for-mhi-net.patch):=20=20=20=20-=20Sets=20the=20default=20mul?=
- =?UTF-8?q?tiplex=20policy=20to=20REQUESTED=20for=20`mhi=5Fnet`=20=20=20?=
- =?UTF-8?q?=20=20=20drivers=20to=20gracefully=20handle=20existing=20QMAP?=
- =?UTF-8?q?=20connections.=20=20=20=20-=20=E2=9A=A0=EF=B8=8F=20This=20is?=
- =?UTF-8?q?=20a=20feed=20override=20patch.=20It=20must=20be=20manually=20c?=
- =?UTF-8?q?opied=20to=20=20=20=20=20=20`feeds/packages/net/modemmanager/pa?=
- =?UTF-8?q?tches/`=20before=20running=20=20=20=20=20=20`make=20package/fee?=
- =?UTF-8?q?ds/packages/modemmanager/compile`.?=
+Subject: [PATCH 4/4] qualcommax: add EM9190 PCIe/MHI support
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -173,4 +145,3 @@ index 0000000000..442328ee60
 + 		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_info },
 -- 
 2.53.0
-

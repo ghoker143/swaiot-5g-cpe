@@ -16,7 +16,46 @@ require_file() {
   [[ -f "$path" ]] || die "Required file not found: $path"
 }
 
+write_repo_manifest() {
+  local root_dir="$1"
+  local output_path="$2"
+  local root_commit_override="${3:-}"
+  local repo_path
+  local rel_path
+  local commit
+  local origin_url
+
+  printf 'repositories:\n' > "$output_path"
+
+  while IFS= read -r repo_path; do
+    rel_path="${repo_path#$root_dir/}"
+    if [[ "$repo_path" == "$root_dir" ]]; then
+      rel_path="."
+    fi
+
+    if [[ "$repo_path" == "$root_dir" && -n "$root_commit_override" ]]; then
+      commit="$root_commit_override"
+    else
+      commit="$(git -C "$repo_path" rev-parse HEAD)"
+    fi
+    origin_url="$(git -C "$repo_path" remote get-url origin 2>/dev/null || printf '%s' 'N/A')"
+
+    {
+      printf '  - repo: %s\n' "$rel_path"
+      printf '    origin: %s\n' "$origin_url"
+      printf '    commit: %s\n' "$commit"
+    } >> "$output_path"
+  done < <(
+    {
+      printf '%s\n' "$root_dir"
+      find "$root_dir" -mindepth 1 \( -type d -name .git -o -type f -name .git \) -printf '%h\n'
+    } | sort -u
+  )
+}
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CI_REPO_COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+CI_REPO_ORIGIN="$(git -C "$ROOT_DIR" remote get-url origin 2>/dev/null || printf '%s' 'N/A')"
 OPENWRT_REPO="${OPENWRT_REPO:-https://github.com/qosmio/openwrt-ipq}"
 OPENWRT_REF="${OPENWRT_REF:-main-nss}"
 OPENWRT_DIR="${OPENWRT_DIR:-$ROOT_DIR/workdir/openwrt}"
@@ -42,6 +81,7 @@ mkdir -p "$(dirname "$OPENWRT_DIR")" "$ARTIFACT_DIR"
 
 log "Cloning $OPENWRT_REPO ($OPENWRT_REF)"
 git clone --branch "$OPENWRT_REF" --depth 1 "$OPENWRT_REPO" "$OPENWRT_DIR"
+OPENWRT_BASE_COMMIT="$(git -C "$OPENWRT_DIR" rev-parse HEAD)"
 
 log "Configuring local git identity for patch application"
 git -C "$OPENWRT_DIR" config user.name "${GIT_COMMITTER_NAME:-github-ci}"
@@ -80,6 +120,14 @@ log "Updating feeds"
 log "Installing feeds"
 "$OPENWRT_DIR/scripts/feeds" install -a
 
+log "Recording source repository revisions before local patches"
+write_repo_manifest "$OPENWRT_DIR" "$ARTIFACT_DIR/source-revisions.yaml" "$OPENWRT_BASE_COMMIT"
+{
+  printf '  - repo: ci\n'
+  printf '    origin: %s\n' "$CI_REPO_ORIGIN"
+  printf '    commit: %s\n' "$CI_REPO_COMMIT"
+} >> "$ARTIFACT_DIR/source-revisions.yaml"
+
 MODEMMANAGER_PATCH="$OPENWRT_DIR/feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch"
 MODEMMANAGER_PATCH_DIR="$OPENWRT_DIR/feeds/packages/net/modemmanager/patches"
 require_file "$MODEMMANAGER_PATCH"
@@ -111,9 +159,12 @@ fi
 
 cat > "$ARTIFACT_DIR/build-info.txt" <<EOF
 build_date_utc=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+ci_repo_commit=$CI_REPO_COMMIT
+ci_repo_origin=$CI_REPO_ORIGIN
 openwrt_repo=$OPENWRT_REPO
 openwrt_ref=$OPENWRT_REF
-openwrt_commit=$(git -C "$OPENWRT_DIR" rev-parse HEAD)
+openwrt_base_commit=$OPENWRT_BASE_COMMIT
+source_revisions_file=source-revisions.yaml
 patches_applied=$(printf '%s ' "${PATCH_FILES[@]##*/}" | sed 's/[[:space:]]*$//')
 seed_config=$SEED_CONFIG_REL
 device_fragment=$(basename "$DEVICE_CONFIG_FRAGMENT")
