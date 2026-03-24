@@ -1,0 +1,26 @@
+From 38e0c0652edbddccf27943673c8f3a679f7e74f1 Mon Sep 17 00:00:00 2001
+From: ghoker143 <ghoker51@protonmail.com>
+Date: Tue, 24 Mar 2026 19:47:29 +0800
+Subject: [PATCH] tools: build: fix missing ccache dependency
+
+Conditionally-built host tools (like liblzo) lack dependency on ccache/compile, potentially leading to parallel build failures.
+---
+ tools/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index 79d3954..69e6a0f 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -156,7 +156,7 @@ else
+ endif
+ 
+ ifneq ($(CONFIG_CCACHE)$(CONFIG_SDK),)
+-$(foreach tool, $(filter-out zstd zlib xz pkgconf patch ninja meson libressl expat cmake,$(tools-y)), $(eval $(curdir)/$(tool)/compile += $(curdir)/ccache/compile))
++$(foreach tool, $(filter-out zstd zlib xz pkgconf patch ninja meson libressl expat cmake,$(sort $(tools-y) $(tools-))), $(eval $(curdir)/$(tool)/compile += $(curdir)/ccache/compile))
+ tools-y += ccache xxhash
+ $(curdir)/xxhash/compile := $(curdir)/cmake/compile
+ $(curdir)/ccache/compile := $(curdir)/xxhash/compile
+-- 
+2.53.0
+
