@@ -143,10 +143,10 @@ log "Running defconfig"
 make -C "$OPENWRT_DIR" defconfig
 
 log "Downloading sources with $JOBS jobs"
-make -C "$OPENWRT_DIR" download -j"$JOBS"
+make -C "$OPENWRT_DIR" download -j"$JOBS" V=s
 
 log "Building firmware with $JOBS jobs"
-make -C "$OPENWRT_DIR" -j"$JOBS"
+make -C "$OPENWRT_DIR" -j"$JOBS" V=s
 
 TARGET_DIR="$OPENWRT_DIR/bin/targets"
 [[ -d "$TARGET_DIR" ]] || die "Build finished but target artifacts were not found"
