@@ -3,7 +3,7 @@ name: Daily OpenWrt Build
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 20 * * *"
+    - cron: "0 0 * * 5"
 
 permissions:
   contents: read
