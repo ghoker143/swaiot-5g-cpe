@@ -120,6 +120,10 @@ log "Updating feeds"
 log "Installing feeds"
 "$OPENWRT_DIR/scripts/feeds" install -a
 
+log "Cloning custom themes and apps"
+git clone --depth 1 https://github.com/eamonxg/luci-theme-aurora.git "$OPENWRT_DIR/package/luci-theme-aurora"
+git clone --depth 1 https://github.com/eamonxg/luci-app-aurora-config.git "$OPENWRT_DIR/package/luci-app-aurora-config"
+
 log "Recording source repository revisions before local patches"
 write_repo_manifest "$OPENWRT_DIR" "$ARTIFACT_DIR/source-revisions.yaml" "$OPENWRT_BASE_COMMIT"
 {
@@ -138,6 +142,7 @@ cp "$MODEMMANAGER_PATCH" "$MODEMMANAGER_PATCH_DIR/"
 log "Appending custom fragment after feeds are available"
 printf '\n# Custom fragment\n' >> "$OPENWRT_DIR/.config"
 cat "$EXTRA_CONFIG_FRAGMENT" >> "$OPENWRT_DIR/.config"
+
 
 log "Running defconfig"
 make -C "$OPENWRT_DIR" defconfig
