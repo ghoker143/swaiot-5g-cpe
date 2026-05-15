@@ -1,0 +1,110 @@
+From 542366bfb795d4f45cf57b405e75c1a0587a9669 Mon Sep 17 00:00:00 2001
+From: ghoker143 <ghoker51@protonmail.com>
+Date: Fri, 15 May 2026 20:56:25 +0800
+Subject: [PATCH] qualcommax: fix Q6 WCSS boot reliability on IPQ8074
+
+Add reset deassert, TCSR configuration and boot address setup for
+the secure PIL path in qcom_q6v5_wcss.  Also fix missing cleanup
+on error paths that caused IRQ unbalance warnings.
+
+Signed-off-by: ghoker143 <ghoker51@protonmail.com>
+---
+ .../0920-fix-q6v5-wcss-startup.patch          | 86 +++++++++++++++++++
+ 1 file changed, 86 insertions(+)
+ create mode 100644 target/linux/qualcommax/patches-6.12/0920-fix-q6v5-wcss-startup.patch
+
+diff --git a/target/linux/qualcommax/patches-6.12/0920-fix-q6v5-wcss-startup.patch b/target/linux/qualcommax/patches-6.12/0920-fix-q6v5-wcss-startup.patch
+new file mode 100644
+index 0000000..1e15959
+--- /dev/null
++++ b/target/linux/qualcommax/patches-6.12/0920-fix-q6v5-wcss-startup.patch
+@@ -0,0 +1,86 @@
++From: ghoker143 <ghoker51@protonmail.com>
++Date: Thu, 15 May 2026 00:00:00 +0800
++Subject: [PATCH] remoteproc: qcom_q6v5_wcss: fix Q6 boot reliability on IPQ8074
++
++Three fixes for Q6 initialization via secure PIL on IPQ8074:
++
++1. Missing cleanup on error paths in q6v5_wcss_start():
++   Add a disable_prepare error path that always calls
++   qcom_q6v5_unprepare() and disables clocks before returning.
++
++2. Missing initialization for secure PIL path:
++   Add reset deassert, TCSR clock gating / bus arbitration setup,
++   and Q6SS_RST_EVB boot address write before the SCM
++   auth_and_reset call.
++
++3. Error path for wait_for_start timeout:
++   On timeout, go to disable_prepare to properly clean up.
++
++Signed-off-by: ghoker143 <ghoker51@protonmail.com>
++--- a/drivers/remoteproc/qcom_q6v5_wcss.c	2026-05-15 20:46:47.545648518 +0800
+++++ b/drivers/remoteproc/qcom_q6v5_wcss.c	2026-05-15 20:46:47.561942448 +0800
++@@ -267,10 +267,38 @@
++ 	qcom_q6v5_prepare(&wcss->q6v5);
++ 
++ 	if (wcss->need_mem_protection) {
+++		ret = reset_control_deassert(wcss->wcss_reset);
+++		if (ret) {
+++			dev_err(wcss->dev, "wcss_reset failed\n");
+++			goto disable_prepare;
+++		}
+++
+++		ret = reset_control_deassert(wcss->wcss_q6_reset);
+++		if (ret) {
+++			dev_err(wcss->dev, "wcss_q6_reset failed\n");
+++			goto disable_prepare;
+++		}
+++
+++		ret = regmap_update_bits(wcss->halt_map,
+++					 wcss->halt_nc + TCSR_GLOBAL_CFG0,
+++					 TCSR_WCSS_CLK_MASK,
+++					 TCSR_WCSS_CLK_ENABLE);
+++		if (ret)
+++			goto disable_prepare;
+++
+++		ret = regmap_update_bits(wcss->halt_map,
+++					 wcss->halt_nc + TCSR_GLOBAL_CFG1,
+++					 1, 0);
+++		if (ret)
+++			goto disable_prepare;
+++
+++		writel(rproc->bootaddr >> 4,
+++		       wcss->reg_base + Q6SS_RST_EVB);
+++
++ 		ret = qcom_scm_pas_auth_and_reset(WCNSS_PAS_ID);
++ 		if (ret) {
++ 			dev_err(wcss->dev, "wcss_reset failed\n");
++-			return ret;
+++			goto disable_prepare;
++ 		}
++ 		goto wait_for_reset;
++ 	}
++@@ -313,8 +341,10 @@
++ 	ret = qcom_q6v5_wait_for_start(&wcss->q6v5, 5 * HZ);
++ 	if (ret == -ETIMEDOUT)
++ 		dev_err(wcss->dev, "start timed out\n");
+++	if (ret)
+++		goto disable_prepare;
++ 
++-	return ret;
+++	return 0;
++ 
++ wcss_q6_reset:
++ 	reset_control_assert(wcss->wcss_q6_reset);
++@@ -322,6 +352,12 @@
++ wcss_reset:
++ 	reset_control_assert(wcss->wcss_reset);
++ 
+++disable_prepare:
+++	qcom_q6v5_unprepare(&wcss->q6v5);
+++	if (wcss->qdss_clk)
+++		clk_disable_unprepare(wcss->qdss_clk);
+++	clk_disable_unprepare(wcss->prng_clk);
+++
++ 	return ret;
++ }
++ 
+-- 
+2.53.0
+
