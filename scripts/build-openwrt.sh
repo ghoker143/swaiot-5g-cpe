@@ -123,6 +123,7 @@ log "Installing feeds"
 log "Cloning custom themes and apps"
 git clone --depth 1 https://github.com/eamonxg/luci-theme-aurora.git "$OPENWRT_DIR/package/luci-theme-aurora"
 git clone --depth 1 https://github.com/eamonxg/luci-app-aurora-config.git "$OPENWRT_DIR/package/luci-app-aurora-config"
+git clone --depth 1 https://github.com/fffonion/openwrt-win98-theme.git "$OPENWRT_DIR/package/luci-theme-win98"
 
 log "Recording source repository revisions before local patches"
 write_repo_manifest "$OPENWRT_DIR" "$ARTIFACT_DIR/source-revisions.yaml" "$OPENWRT_BASE_COMMIT"
