@@ -1,42 +1,16 @@
-From 442012d7a73f41191925a2dc3807c679fb23a02d Mon Sep 17 00:00:00 2001
+From c0ca17ed171e691a92c974f285068ff996769793 Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
-Date: Sun, 9 Aug 2026 14:00:00 +0800
-Subject: [PATCH 4/4] qualcommax: add EM9190 PCIe/MHI support (QMI-only)
+Date: Sun, 9 Aug 2026 21:32:19 +0800
+Subject: [PATCH 4/6] qualcommax: add EM9190 PCIe/MHI support (QMI-only)
 
-Sierra EM9190 modules with GENERIC firmware report the same PCI
-subsystem ID as Foxconn SDX55 (17cb:010c).  Bind that ID to a channel
-configuration derived from sierra-em919x (3 event rings, 4 MSI) to
-avoid the broken 5th MSI vector of the foxconn config on GICv2m
-platforms (e.g. IPQ807x), but with the MBIM control channels (12/13)
-removed.
-
-Rationale for dropping MBIM: on this firmware (SWIX55C_03.14.10.01),
-opening the MBIM channel makes the modem switch its QMI WDA data
-aggregation protocol to MBIM mode, persistent until the next modem
-reset.  ModemManager probes every wwan port, so it opens the MBIM port
-on every boot; a subsequent QMI connection attempt with the default
-multiplex=none then fails in ModemManager 1.24 with
-
-  Unsupported: Cannot disable multiplex support
-
-because MM's SET_DEFAULT short-circuit treats any non-QMAP aggregation
-value (including MBIM) as "multiplex already disabled" and skips the
-WDA sync, while the bearer connect check requires DAP == DISABLED.
-Not exposing the MBIM channel at the MHI level keeps the modem on the
-plain QMI/raw-ip path, which is verified to work with unpatched
-ModemManager.  It also avoids exercising the firmware's MBIM-over-MHI
-code path, which is suspected to cause random firmware crashes
-("mhi-pci-generic ... firmware crashed") on this unit.
-
-Signed-off-by: ghoker143 <ghoker51@protonmail.com>
 ---
- .../999-mhi-em9190-sierra-nombim.patch        | 69 ++++++++++++++++++++
+ .../999-mhi-em9190-sierra-nombim.patch        | 69 +++++++++++++++++++
  1 file changed, 69 insertions(+)
  create mode 100644 target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
 
 diff --git a/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
 new file mode 100644
-index 0000000000..442328ee60
+index 0000000..545032a
 --- /dev/null
 +++ b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
 @@ -0,0 +1,69 @@
@@ -109,3 +83,6 @@ index 0000000000..442328ee60
 + 	/* EM919x (sdx55), use the same vid:pid as qcom-sdx55m */
 + 	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, 0x18d7, 0x0200),
 + 		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_info },
+-- 
+2.54.0
+

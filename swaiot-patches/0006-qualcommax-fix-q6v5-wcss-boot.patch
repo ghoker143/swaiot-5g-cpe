@@ -1,13 +1,8 @@
-From 542366bfb795d4f45cf57b405e75c1a0587a9669 Mon Sep 17 00:00:00 2001
+From 1be754c7096a8a77b2909b1f5678a7b38c50447b Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
-Date: Fri, 15 May 2026 20:56:25 +0800
-Subject: [PATCH] qualcommax: fix Q6 WCSS boot reliability on IPQ8074
+Date: Sun, 9 Aug 2026 21:32:19 +0800
+Subject: [PATCH 6/6] qualcommax: fix Q6 WCSS boot reliability on IPQ8074
 
-Add reset deassert, TCSR configuration and boot address setup for
-the secure PIL path in qcom_q6v5_wcss.  Also fix missing cleanup
-on error paths that caused IRQ unbalance warnings.
-
-Signed-off-by: ghoker143 <ghoker51@protonmail.com>
 ---
  .../0920-fix-q6v5-wcss-startup.patch          | 86 +++++++++++++++++++
  1 file changed, 86 insertions(+)
@@ -106,5 +101,5 @@ index 0000000..1e15959
 + }
 + 
 -- 
-2.53.0
+2.54.0
 

@@ -1,7 +1,8 @@
-From b2265ef454afb6cefee8131421ef03f67c01ff05 Mon Sep 17 00:00:00 2001
+From 3f0606fe2ca3f501f98e76057cf2c14b284b32c9 Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
-Date: Wed, 11 Mar 2026 00:10:31 +0800
-Subject: [PATCH 2/4] fix ecc in nand
+Date: Sun, 9 Aug 2026 21:31:20 +0800
+Subject: [PATCH 2/6] fix ecc in nand
+
 
 Signed-off-by: ghoker143 <ghoker51@protonmail.com>
 ---
@@ -11,7 +12,7 @@ Signed-off-by: ghoker143 <ghoker51@protonmail.com>
  3 files changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
-index 6fa3bc8b7d..9697eff7de 100644
+index c16245b..812973b 100644
 --- a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
 +++ b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
 @@ -478,10 +478,13 @@
@@ -30,10 +31,10 @@ index 6fa3bc8b7d..9697eff7de 100644
  		nand-bus-width = <8>;
  
 diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/image/ipq807x.mk
-index e47f825805..bb3b0a4e6d 100644
+index fd627f9..26c3ad1 100644
 --- a/target/linux/qualcommax/image/ipq807x.mk
 +++ b/target/linux/qualcommax/image/ipq807x.mk
-@@ -453,6 +453,7 @@ define Device/swaiot_m01mx_cpe
+@@ -412,6 +412,7 @@ define Device/swaiot_m01mx_cpe
  	DEVICE_MODEL := M01MX CPE
  	BLOCKSIZE := 128k
  	PAGESIZE := 2048
@@ -42,17 +43,17 @@ index e47f825805..bb3b0a4e6d 100644
  	DEVICE_DTS_CONFIG := config@swaiot.m01mx
  	SOC := ipq8074
 diff --git a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
-index 9bece63345..ead93450ae 100644
+index 1ddc73f..2938647 100644
 --- a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
-@@ -187,6 +187,7 @@ platform_do_upgrade() {
+@@ -185,6 +185,7 @@ platform_do_upgrade() {
  	netgear,wax218|\
  	netgear,wax620|\
  	netgear,wax630|\
 +	swaiot,m01mx|\
- 	zyxel,nwa110ax|\
  	zyxel,nwa210ax)
  		nand_do_upgrade "$1"
+ 		;;
 -- 
-2.53.0
+2.54.0
 

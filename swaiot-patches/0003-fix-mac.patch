@@ -1,7 +1,8 @@
-From 5470896fac84c3a2d48f3f07e3596a0dec35c504 Mon Sep 17 00:00:00 2001
+From 6a3cb38611665cd558d1676ee84a846ce506869a Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
-Date: Fri, 13 Mar 2026 20:41:18 +0800
-Subject: [PATCH 3/4] fix mac
+Date: Sun, 9 Aug 2026 21:31:40 +0800
+Subject: [PATCH 3/6] fix mac
+
 
 Signed-off-by: ghoker143 <ghoker51@protonmail.com>
 ---
@@ -11,7 +12,7 @@ Signed-off-by: ghoker143 <ghoker51@protonmail.com>
  3 files changed, 22 insertions(+), 19 deletions(-)
 
 diff --git a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
-index 9697eff7de..585dec736e 100644
+index 812973b..a2679c3 100644
 --- a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
 +++ b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
 @@ -326,11 +326,7 @@
@@ -72,10 +73,10 @@ index 9697eff7de..585dec736e 100644
  
  &wifi {
 diff --git a/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network b/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
-index 35c78d5d91..cff83ca77d 100644
+index c5c6e71..4c88c39 100644
 --- a/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
 +++ b/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
-@@ -103,20 +103,6 @@ ipq807x_setup_macs()
+@@ -97,20 +97,6 @@ ipq807x_setup_macs()
  		lan_mac=$(macaddr_add "$wan_mac" 1)
  		label_mac="$wan_mac"
  		;;
@@ -93,14 +94,14 @@ index 35c78d5d91..cff83ca77d 100644
 -		[ -n "$wan_mac" ] && lan_mac=$(macaddr_add "$wan_mac" 1)
 -		label_mac="$wan_mac"
 -		;;
- 	tcl,linkhub-hh500v)
- 		wan_mac=$(mtd_get_mac_binary "0:ART" 0x5e290)
- 		lan_mac=$(mtd_get_mac_binary "0:ART" 0x5e296)
+ 	tplink,deco-x80-5g)
+ 		label_mac=$(get_mac_binary /tmp/factory_data/default-mac 0)
+ 		lan_mac=$(macaddr_add $label_mac 1)
 diff --git a/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata b/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
-index 157e79be21..a5654a4800 100644
+index a215b34..9b852d8 100644
 --- a/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
 +++ b/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
-@@ -103,6 +103,9 @@ case "$FIRMWARE" in
+@@ -94,6 +94,9 @@ case "$FIRMWARE" in
  		;;
  	swaiot,m01mx)
  		caldata_extract "0:art" 0x1000 0x20000
@@ -111,5 +112,5 @@ index 157e79be21..a5654a4800 100644
  	prpl,haze|\
  	spectrum,sax1v1k)
 -- 
-2.53.0
+2.54.0
 
