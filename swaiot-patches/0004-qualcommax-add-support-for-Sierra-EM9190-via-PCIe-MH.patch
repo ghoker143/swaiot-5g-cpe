@@ -1,4 +1,4 @@
-From 9ace20e18e92710ba4b7b7e71d28f6233524b483 Mon Sep 17 00:00:00 2001
+From 7f9ed89924da687bc76d73e98da09403ff4c1e17 Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
 Date: Sun, 9 Aug 2026 21:32:19 +0800
 Subject: [PATCH 4/6] qualcommax: add EM9190 PCIe/MHI support (QMI-only)

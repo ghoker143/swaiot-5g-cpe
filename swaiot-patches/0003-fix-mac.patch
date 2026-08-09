@@ -1,4 +1,4 @@
-From 762dacaab54fcf664fa1b29b949179698682ce76 Mon Sep 17 00:00:00 2001
+From 4384bed43e9c60be13e34068539a511c34234335 Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
 Date: Sun, 9 Aug 2026 21:31:40 +0800
 Subject: [PATCH 3/6] fix mac
@@ -6,15 +6,15 @@ Subject: [PATCH 3/6] fix mac
 
 Signed-off-by: ghoker143 <ghoker51@protonmail.com>
 ---
- .../dts/ipq8074-swaiot-m01mx-cpe.dts          | 24 +++++++++++++++----
+ .../dts/qcom/ipq8074-swaiot-m01mx-cpe.dts     | 24 +++++++++++++++----
  .../ipq807x/base-files/etc/board.d/02_network | 14 -----------
  .../etc/hotplug.d/firmware/11-ath11k-caldata  |  3 +++
  3 files changed, 22 insertions(+), 19 deletions(-)
 
-diff --git a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
+diff --git a/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8074-swaiot-m01mx-cpe.dts b/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8074-swaiot-m01mx-cpe.dts
 index 812973b..a2679c3 100644
---- a/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
-+++ b/target/linux/qualcommax/dts/ipq8074-swaiot-m01mx-cpe.dts
+--- a/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8074-swaiot-m01mx-cpe.dts
++++ b/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8074-swaiot-m01mx-cpe.dts
 @@ -326,11 +326,7 @@
  
  	flash@0 {
