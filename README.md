@@ -25,8 +25,7 @@ The CI workflow does the following:
 2. Applies the Swaiot-specific patch series from [`swaiot-patches/`](./swaiot-patches/).
 3. Copies the repository [`.config`](./.config) into the OpenWrt build tree.
 4. Updates and installs feeds.
-5. Installs the ModemManager feed patch required by this setup.
-6. Runs `make defconfig`, downloads sources, and builds the firmware.
+5. Runs `make defconfig`, downloads sources, and builds the firmware.
 
 If patch application fails against the latest upstream source, the daily build fails and no firmware artifact is produced for that run.
 
@@ -36,7 +35,9 @@ In my own deployment, this target is used with a Sierra Wireless EM9190 modem.
 
 That does **not** mean this repository is universally correct for every Swaiot unit. Hardware revisions, modem batches, firmware versions, board wiring, and PCIe enumeration details may differ.
 
-What may still be useful to others is the overall `ModemManager + QMI + multiplexing` path. In this setup, that path is working and may serve as a practical reference for people bringing up similar hardware.
+What may still be useful to others is the overall `ModemManager + QMI + raw-ip` path over the upstream MHI stack. In this setup, that path is working and may serve as a practical reference for people bringing up similar hardware.
+
+Note that the MHI channel configuration used here does not expose the modem's MBIM channels. On the EM9190 firmware batch in my unit (SWIX55C_03.14.10.01), opening the MBIM channel makes the modem switch its QMI WDA data aggregation to MBIM mode until the next modem reset, which breaks unpatched ModemManager QMI connections (`Cannot disable multiplex support`) and is suspected to cause random firmware crashes. Keeping the modem on the plain QMI/raw-ip path avoids both problems.
 
 ## Important Note About `0004`
 

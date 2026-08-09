@@ -1,147 +1,111 @@
 From 442012d7a73f41191925a2dc3807c679fb23a02d Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
-Date: Sun, 22 Mar 2026 14:34:30 +0800
-Subject: [PATCH 4/4] qualcommax: add EM9190 PCIe/MHI support
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Date: Sun, 9 Aug 2026 14:00:00 +0800
+Subject: [PATCH 4/4] qualcommax: add EM9190 PCIe/MHI support (QMI-only)
+
+Sierra EM9190 modules with GENERIC firmware report the same PCI
+subsystem ID as Foxconn SDX55 (17cb:010c).  Bind that ID to a channel
+configuration derived from sierra-em919x (3 event rings, 4 MSI) to
+avoid the broken 5th MSI vector of the foxconn config on GICv2m
+platforms (e.g. IPQ807x), but with the MBIM control channels (12/13)
+removed.
+
+Rationale for dropping MBIM: on this firmware (SWIX55C_03.14.10.01),
+opening the MBIM channel makes the modem switch its QMI WDA data
+aggregation protocol to MBIM mode, persistent until the next modem
+reset.  ModemManager probes every wwan port, so it opens the MBIM port
+on every boot; a subsequent QMI connection attempt with the default
+multiplex=none then fails in ModemManager 1.24 with
+
+  Unsupported: Cannot disable multiplex support
+
+because MM's SET_DEFAULT short-circuit treats any non-QMAP aggregation
+value (including MBIM) as "multiplex already disabled" and skips the
+WDA sync, while the bearer connect check requires DAP == DISABLED.
+Not exposing the MBIM channel at the MHI level keeps the modem on the
+plain QMI/raw-ip path, which is verified to work with unpatched
+ModemManager.  It also avoids exercising the firmware's MBIM-over-MHI
+code path, which is suspected to cause random firmware crashes
+("mhi-pci-generic ... firmware crashed") on this unit.
 
 Signed-off-by: ghoker143 <ghoker51@protonmail.com>
 ---
- ...ault-multiplex-requested-for-mhi-net.patch | 35 +++++++++++
- ...-vlan-parse-if-ifname-already-exists.patch | 58 +++++++++++++++++++
- .../999-mhi-em9190-sierra-fix.patch           | 16 +++++
- 3 files changed, 109 insertions(+)
- create mode 100644 feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch
- create mode 100644 package/network/config/netifd/patches/0001-device-skip-vlan-parse-if-ifname-already-exists.patch
- create mode 100644 target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-fix.patch
+ .../999-mhi-em9190-sierra-nombim.patch        | 69 ++++++++++++++++++++
+ 1 file changed, 69 insertions(+)
+ create mode 100644 target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
 
-diff --git a/feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch b/feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch
-new file mode 100644
-index 0000000000..10e4bb88c4
---- /dev/null
-+++ b/feed_patches/0005-bearer-qmi-default-multiplex-requested-for-mhi-net.patch
-@@ -0,0 +1,35 @@
-+From 2222222222222222222222222222222222222222 Mon Sep 17 00:00:00 2001
-+From: ghoker143 <ghoker51@protonmail.com>
-+Date: Sun, 22 Mar 2026 12:35:00 +0800
-+Subject: [PATCH] bearer-qmi: default to multiplex=requested for mhi_net data ports
-+
-+When no multiplex setting is given by the user, ModemManager currently
-+defaults to MM_BEARER_MULTIPLEX_SUPPORT_NONE for all non-IPA data port
-+drivers.  For PCIe modems using the mhi_net driver, however, the kernel
-+rmnet/MHI stack negotiates a QMAP aggregation protocol (QMAPv4 or v5)
-+during QMI WDA port setup.  Attempting to connect with multiplex=none
-+then fails immediately because the modem firmware cannot revert the
-+already-established QMAP session:
-+
-+  Failed to connect: Unsupported: Cannot disable multiplex support
-+
-+This affects all QMI-capable PCIe modems using mhi_net (Qualcomm SDX55,
-+SDX62, SDX75 based modules such as Sierra Wireless EM9190, FM350, etc.).
-+
-+When the data port driver is "mhi_net" and the user has not specified a
-+multiplex preference, default to MM_BEARER_MULTIPLEX_SUPPORT_REQUESTED.
-+REQUESTED (not REQUIRED as used for IPA) is chosen so that the connection
-+can still succeed gracefully in the unlikely event that QMAP is unavailable
-+on a particular mhi_net device.
-+---
-+--- a/src/mm-bearer-qmi.c
-++++ b/src/mm-bearer-qmi.c
-+@@ -2443,6 +2443,8 @@
-+             ctx->multiplex = MM_BEARER_MULTIPLEX_SUPPORT_REQUESTED;
-+         else if (!g_strcmp0 (data_port_driver, "ipa"))
-+             ctx->multiplex = MM_BEARER_MULTIPLEX_SUPPORT_REQUIRED;
-++        else if (!g_strcmp0 (data_port_driver, "mhi_net"))
-++            ctx->multiplex = MM_BEARER_MULTIPLEX_SUPPORT_REQUESTED;
-+         else
-+             ctx->multiplex = MM_BEARER_MULTIPLEX_SUPPORT_NONE;
-+     }
-diff --git a/package/network/config/netifd/patches/0001-device-skip-vlan-parse-if-ifname-already-exists.patch b/package/network/config/netifd/patches/0001-device-skip-vlan-parse-if-ifname-already-exists.patch
-new file mode 100644
-index 0000000000..4e8db19e08
---- /dev/null
-+++ b/package/network/config/netifd/patches/0001-device-skip-vlan-parse-if-ifname-already-exists.patch
-@@ -0,0 +1,58 @@
-+From 1111111111111111111111111111111111111111 Mon Sep 17 00:00:00 2001
-+From: ghoker143 <ghoker51@protonmail.com>
-+Date: Sun, 22 Mar 2026 12:30:00 +0800
-+Subject: [PATCH] device: skip VLAN chain lookup for existing kernel interfaces
-+
-+netifd's __device_get() treats any interface name containing a '.' as a
-+VLAN-style device by immediately dispatching to get_vlan_device_chain().
-+This assumption dates from the era when only kernel "eth0.X" VLAN devices
-+had dots in their names.
-+
-+Modern externally-managed interfaces such as the rmnet mux links created
-+by ModemManager for QMI QMAP multiplexing (e.g. qmapmux0.0, qmapmux0.1)
-+are legitimate kernel netdevices that happen to contain a dot.  When
-+ModemManager calls notify_proto with such an ifname, netifd incorrectly
-+tries to resolve it as a VLAN device:
-+
-+  ubus call network.device status '{"name":"qmapmux0.0"}'
-+  => { "type": "VLAN", "present": false }
-+
-+This causes notify_proto to fail with "Unknown error" and the interface
-+never comes up under netifd control.
-+
-+Fix: before dispatching to get_vlan_device_chain(), probe the kernel with
-+if_nametoindex().  If the full dotted name already exists as a real netdev,
-+skip the VLAN path and fall through to the normal device lookup / creation
-+path.  This preserves all existing VLAN behaviour: when eth0.10 does not
-+yet exist in the kernel, if_nametoindex("eth0.10") returns 0 and netifd
-+still creates it as a VLAN device as before.
-+---
-+--- a/device.c
-++++ b/device.c
-+@@ -14,6 +14,7 @@
-+ #include <string.h>
-+ #include <stdlib.h>
-+ #include <stdio.h>
-++#include <net/if.h>
-+ #include <assert.h>
-+ 
-+ #include <sys/types.h>
-+@@ -893,8 +894,16 @@
-+ 
-+ 	dev = avl_find_element(&devices, name, dev, avl);
-+ 
-+-	if (!dev && check_vlan && strchr(name, '.'))
-+-		return get_vlan_device_chain(name, create);
-++	if (!dev && check_vlan && strchr(name, '.')) {
-++		/*
-++		 * Only treat dotted names as VLAN-style if the full name does
-++		 * NOT already exist as a real kernel netdev.  Externally managed
-++		 * interfaces (e.g. ModemManager QMI mux links: qmapmux0.0) are
-++		 * valid kernel devices whose names happen to contain a dot.
-++		 */
-++		if (!if_nametoindex(name))
-++			return get_vlan_device_chain(name, create);
-++	}
-+ 
-+ 	if (name[0] == '@')
-+ 		return device_alias_get(name + 1);
-diff --git a/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-fix.patch b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-fix.patch
+diff --git a/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
 new file mode 100644
 index 0000000000..442328ee60
 --- /dev/null
-+++ b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-fix.patch
-@@ -0,0 +1,16 @@
++++ b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
+@@ -0,0 +1,69 @@
 +--- a/drivers/bus/mhi/host/pci_generic.c
 ++++ b/drivers/bus/mhi/host/pci_generic.c
-+@@ -782,7 +782,11 @@
++@@ -614,6 +614,51 @@
++ 	.sideband_wake = false,
++ };
++ 
+++/* Swaiot M01M variant: Sierra EM9190 with GENERIC firmware (17cb:010c).
+++ * Same channel layout as sierra-em919x but without the MBIM control
+++ * channels (12/13).  Opening the MBIM channel makes this firmware switch
+++ * its QMI WDA data aggregation to MBIM mode (persistent until modem
+++ * reset), which breaks QMI raw-ip setups and has been linked to random
+++ * firmware crashes.  Not exposing the channel keeps the modem on the
+++ * plain QMI/raw-ip path. */
+++static const struct mhi_channel_config mhi_sierra_em919x_nombim_channels[] = {
+++	MHI_CHANNEL_CONFIG_UL_SBL(2, "SAHARA", 32, 0),
+++	MHI_CHANNEL_CONFIG_DL_SBL(3, "SAHARA", 256, 0),
+++	MHI_CHANNEL_CONFIG_UL(4, "DIAG", 32, 0),
+++	MHI_CHANNEL_CONFIG_DL(5, "DIAG", 32, 0),
+++	MHI_CHANNEL_CONFIG_UL(14, "QMI", 32, 0),
+++	MHI_CHANNEL_CONFIG_DL(15, "QMI", 32, 0),
+++	MHI_CHANNEL_CONFIG_UL(32, "DUN", 32, 0),
+++	MHI_CHANNEL_CONFIG_DL(33, "DUN", 32, 0),
+++	MHI_CHANNEL_CONFIG_HW_UL(100, "IP_HW0", 512, 1),
+++	MHI_CHANNEL_CONFIG_HW_DL(101, "IP_HW0", 512, 2),
+++};
+++
+++static struct mhi_event_config modem_sierra_em919x_nombim_mhi_events[] = {
+++	/* first ring is control+data and DIAG ring */
+++	MHI_EVENT_CONFIG_CTRL(0, 2048),
+++	/* Hardware channels request dedicated hardware event rings */
+++	MHI_EVENT_CONFIG_HW_DATA(1, 2048, 100),
+++	MHI_EVENT_CONFIG_HW_DATA(2, 2048, 101)
+++};
+++
+++static const struct mhi_controller_config modem_sierra_em919x_nombim_config = {
+++	.max_channels = 128,
+++	.timeout_ms = 24000,
+++	.num_channels = ARRAY_SIZE(mhi_sierra_em919x_nombim_channels),
+++	.ch_cfg = mhi_sierra_em919x_nombim_channels,
+++	.num_events = ARRAY_SIZE(modem_sierra_em919x_nombim_mhi_events),
+++	.event_cfg = modem_sierra_em919x_nombim_mhi_events,
+++};
+++
+++static const struct mhi_pci_dev_info mhi_sierra_em919x_nombim_info = {
+++	.name = "sierra-em919x-nombim",
+++	.config = &modem_sierra_em919x_nombim_config,
+++	.bar_num = MHI_PCI_DEFAULT_BAR_NUM,
+++	.dma_data_width = 32,
+++	.sideband_wake = false,
+++};
+++
++ static const struct mhi_channel_config mhi_telit_fn980_hw_v1_channels[] = {
++ 	MHI_CHANNEL_CONFIG_UL(14, "QMI", 32, 0),
++ 	MHI_CHANNEL_CONFIG_DL(15, "QMI", 32, 0),
++@@ -781,8 +826,13 @@
++ 		.driver_data = (kernel_ulong_t) &mhi_telit_fn920c04_info },
 + 	{ PCI_DEVICE(PCI_VENDOR_ID_QCOM, 0x0304),
 + 		.driver_data = (kernel_ulong_t) &mhi_qcom_sdx24_info },
-+-	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, PCI_VENDOR_ID_QCOM, 0x010c),
-+-		.driver_data = (kernel_ulong_t) &mhi_foxconn_sdx55_info },
 ++	/* Sierra Wireless EM9190 with GENERIC firmware reports same
 ++	 * subsystem ID as Foxconn SDX55 (17cb:010c). Use sierra_em919x
-++	 * config (3 event rings, 4 MSI) to avoid broken 5th MSI vector
-++	 * on GICv2m platforms (e.g. IPQ807x). */
-++	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, PCI_VENDOR_ID_QCOM, 0x010c),
-++		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_info },
+++	 * derived config (3 event rings, 4 MSI) to avoid broken 5th MSI
+++	 * vector on GICv2m platforms (e.g. IPQ807x), without MBIM
+++	 * channels (see above). */
++ 	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, PCI_VENDOR_ID_QCOM, 0x010c),
++-		.driver_data = (kernel_ulong_t) &mhi_foxconn_sdx55_info },
+++		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_nombim_info },
 + 	/* EM919x (sdx55), use the same vid:pid as qcom-sdx55m */
 + 	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, 0x18d7, 0x0200),
 + 		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_info },
--- 
-2.53.0
