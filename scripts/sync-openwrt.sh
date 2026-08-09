@@ -179,6 +179,15 @@ log "Appending custom fragment after feeds are available"
 printf '\n# Custom fragment\n' >> "$OPENWRT_DIR/.config"
 cat "$EXTRA_CONFIG_FRAGMENT" >> "$OPENWRT_DIR/.config"
 
+# Stable builds: pin the embedded version number to the upstream tag in
+# stable-base, otherwise a shallow clone identifies as SNAPSHOT.
+if [[ -f "$ROOT_DIR/stable-base" ]]; then
+  STABLE_VERSION="$(tr -d '[:space:]' < "$ROOT_DIR/stable-base")"
+  STABLE_VERSION="${STABLE_VERSION#v}"
+  log "Pinning embedded version number to $STABLE_VERSION (from stable-base)"
+  printf '\n# Stable version pin\nCONFIG_VERSION_NUMBER="%s"\n' "$STABLE_VERSION" >> "$OPENWRT_DIR/.config"
+fi
+
 log "Running defconfig"
 make -C "$OPENWRT_DIR" defconfig
 
