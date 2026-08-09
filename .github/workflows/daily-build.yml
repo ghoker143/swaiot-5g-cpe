@@ -114,8 +114,8 @@ jobs:
           restore-keys: |
             openwrt-ccache-${{ env.OPENWRT_REF }}-
 
-      - name: Build firmware
-        run: ./scripts/build-openwrt.sh
+      - name: Sync sources and build firmware
+        run: make
 
       - name: Upload firmware artifacts
         if: success()
