@@ -1,0 +1,187 @@
+name: Stable Release Build
+
+# Triggered by pushing to the stable branch. To cut a new stable
+# release: bump the upstream OpenWrt tag in the `stable-base` file and
+# push. If the corresponding <tag>-swaiot release already exists, the
+# run skips the build (delete the release first to force a rebuild).
+
+on:
+  push:
+    branches:
+      - stable
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stable-openwrt-build
+  cancel-in-progress: false
+
+env:
+  OPENWRT_REPO: https://github.com/qosmio/openwrt-ipq
+  OPENWRT_REF: 25.12-nss
+  OPENWRT_DIR: ${{ github.workspace }}/workdir/openwrt
+  ARTIFACT_DIR: ${{ github.workspace }}/artifacts
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    outputs:
+      upstream_tag: ${{ steps.tags.outputs.upstream_tag }}
+      release_tag: ${{ steps.tags.outputs.release_tag }}
+      build_needed: ${{ steps.tags.outputs.build_needed }}
+    steps:
+      - name: Checkout CI repository (stable branch)
+        uses: actions/checkout@v5
+        with:
+          ref: stable
+
+      - name: Read base tag and check for existing release
+        id: tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          latest="$(tr -d '[:space:]' < stable-base)"
+          [ -n "$latest" ] || { echo "::error::stable-base file is empty"; exit 1; }
+          release_tag="${latest}-swaiot"
+          echo "upstream_tag=$latest" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          if gh release view "$release_tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "build_needed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release $release_tag already exists; delete it first to rebuild."
+          else
+            echo "build_needed=true" >> "$GITHUB_OUTPUT"
+            echo "Will build $release_tag (upstream $latest)."
+          fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.build_needed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 720
+    steps:
+      - name: Checkout CI repository (stable branch)
+        uses: actions/checkout@v5
+        with:
+          ref: stable
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ack \
+            antlr3 \
+            asciidoc \
+            autoconf \
+            automake \
+            autopoint \
+            binutils \
+            bison \
+            build-essential \
+            clang \
+            cmake \
+            cpio \
+            curl \
+            device-tree-compiler \
+            ecj \
+            fastjar \
+            flex \
+            gawk \
+            gcc-multilib \
+            g++-multilib \
+            gettext \
+            genisoimage \
+            git \
+            gperf \
+            haveged \
+            help2man \
+            intltool \
+            jq \
+            libc6-dev-i386 \
+            libelf-dev \
+            libglib2.0-dev \
+            libgmp3-dev \
+            libltdl-dev \
+            libmpc-dev \
+            libmpfr-dev \
+            libncurses-dev \
+            libpython3-dev \
+            libreadline-dev \
+            libssl-dev \
+            libtool \
+            lrzsz \
+            mkisofs \
+            msmtp \
+            ninja-build \
+            p7zip \
+            p7zip-full \
+            patch \
+            pkgconf \
+            python3 \
+            python3-pip \
+            python3-ply \
+            python3-docutils \
+            qemu-utils \
+            rsync \
+            scons \
+            sharutils \
+            subversion \
+            swig \
+            texinfo \
+            uglifyjs \
+            upx-ucl \
+            unzip \
+            vim \
+            wget \
+            xmlto \
+            xsltproc \
+            zlib1g-dev
+
+      - name: Restore dl cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.OPENWRT_DIR }}/dl
+          key: openwrt-dl-${{ env.OPENWRT_REF }}-${{ needs.check.outputs.upstream_tag }}
+          restore-keys: |
+            openwrt-dl-${{ env.OPENWRT_REF }}-
+
+      - name: Restore ccache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.OPENWRT_DIR }}/.ccache
+          key: openwrt-ccache-${{ env.OPENWRT_REF }}-${{ github.run_id }}
+          restore-keys: |
+            openwrt-ccache-${{ env.OPENWRT_REF }}-
+
+      - name: Sync sources and build firmware
+        run: make
+
+      - name: Upload firmware artifacts
+        if: success()
+        uses: actions/upload-artifact@v6
+        with:
+          name: swaiot-m01mx-openwrt-${{ needs.check.outputs.upstream_tag }}
+          path: ${{ env.ARTIFACT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.check.outputs.release_tag }}
+          UPSTREAM_TAG: ${{ needs.check.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          cd "$ARTIFACT_DIR"
+          mapfile -t images < <(find targets -type f -name '*m01mx*' | sort)
+          (( ${#images[@]} > 0 )) || { echo "::error::no device images found"; exit 1; }
+          gh release create "$RELEASE_TAG" \
+            --repo "${{ github.repository }}" \
+            --title "Swaiot M01MX OpenWrt $UPSTREAM_TAG (NSS)" \
+            --notes "Base: qosmio/openwrt-ipq \`25.12-nss\`, following upstream OpenWrt \`$UPSTREAM_TAG\`. See build-info.txt and source-revisions.yaml for exact revisions." \
+            "${images[@]}" \
+            openwrt.config \
+            build-info.txt \
+            source-revisions.yaml
