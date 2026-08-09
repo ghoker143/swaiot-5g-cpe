@@ -1,4 +1,4 @@
-From 1be754c7096a8a77b2909b1f5678a7b38c50447b Mon Sep 17 00:00:00 2001
+From dd61cbe3f3025bbc8dc107b02b2b16e85256903c Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
 Date: Sun, 9 Aug 2026 21:32:19 +0800
 Subject: [PATCH 6/6] qualcommax: fix Q6 WCSS boot reliability on IPQ8074

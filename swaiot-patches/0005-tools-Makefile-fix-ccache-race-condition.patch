@@ -1,4 +1,4 @@
-From eba8f2df3cbd1fa81e5c81371343882ff0558fed Mon Sep 17 00:00:00 2001
+From 49c3aad6e0718acca511800770bd0a9e340cd11c Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
 Date: Sun, 9 Aug 2026 21:32:19 +0800
 Subject: [PATCH 5/6] tools: build: fix missing ccache dependency

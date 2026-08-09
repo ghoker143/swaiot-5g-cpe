@@ -1,4 +1,4 @@
-From 3f0606fe2ca3f501f98e76057cf2c14b284b32c9 Mon Sep 17 00:00:00 2001
+From 08f3d5867b3e8b00818d60e540a0d8fed689eb01 Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
 Date: Sun, 9 Aug 2026 21:31:20 +0800
 Subject: [PATCH 2/6] fix ecc in nand
@@ -31,11 +31,11 @@ index c16245b..812973b 100644
  		nand-bus-width = <8>;
  
 diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/image/ipq807x.mk
-index fd627f9..26c3ad1 100644
+index 32a766e..fd81245 100644
 --- a/target/linux/qualcommax/image/ipq807x.mk
 +++ b/target/linux/qualcommax/image/ipq807x.mk
-@@ -412,6 +412,7 @@ define Device/swaiot_m01mx_cpe
- 	DEVICE_MODEL := M01MX CPE
+@@ -413,6 +413,7 @@ define Device/swaiot_m01mx_cpe
+ 	DEVICE_DTS_DIR := ../dts
  	BLOCKSIZE := 128k
  	PAGESIZE := 2048
 +	SUPPORTED_DEVICES := swaiot,m01mx
