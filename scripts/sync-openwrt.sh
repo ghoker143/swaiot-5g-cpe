@@ -92,6 +92,12 @@ if [[ -d "$OPENWRT_DIR/.git" ]] && \
   # ignored paths (dl/, feeds/, bin/, .ccache) are kept here, but feeds
   # are reset explicitly below
   git -C "$OPENWRT_DIR" clean -ffd
+  # drop stale am/rebase state left by interrupted previous runs;
+  # force-sync makes it meaningless by definition
+  git -C "$OPENWRT_DIR" am --abort 2>/dev/null || true
+  git -C "$OPENWRT_DIR" rebase --abort 2>/dev/null || true
+  rm -rf "$(git -C "$OPENWRT_DIR" rev-parse --git-path rebase-apply)" \
+         "$(git -C "$OPENWRT_DIR" rev-parse --git-path rebase-merge)"
 else
   log "Cloning $OPENWRT_REPO ($OPENWRT_REF)"
   rm -rf "$OPENWRT_DIR"
