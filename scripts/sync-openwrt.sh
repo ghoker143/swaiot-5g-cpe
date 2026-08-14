@@ -167,12 +167,6 @@ git clone --depth 1 https://github.com/eamonxg/luci-theme-aurora.git "$OPENWRT_D
 git clone --depth 1 https://github.com/eamonxg/luci-app-aurora-config.git "$OPENWRT_DIR/package/luci-app-aurora-config"
 git clone --depth 1 https://github.com/fffonion/openwrt-win98-theme.git "$OPENWRT_DIR/package/luci-theme-win98"
 
-if [[ -d "$ROOT_DIR/rootfs" ]]; then
-  log "Installing rootfs overlay"
-  rm -rf "$OPENWRT_DIR/files"
-  cp -a "$ROOT_DIR/rootfs" "$OPENWRT_DIR/files"
-fi
-
 log "Recording source repository revisions before local patches"
 write_repo_manifest "$OPENWRT_DIR" "$ARTIFACT_DIR/source-revisions.yaml" "$OPENWRT_BASE_COMMIT"
 {
