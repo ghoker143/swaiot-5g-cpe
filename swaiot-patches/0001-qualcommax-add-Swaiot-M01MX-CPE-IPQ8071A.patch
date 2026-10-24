@@ -1,4 +1,4 @@
-From f3b52ec094dff9a7b3e91fd9b0ddfc027d5c06ab Mon Sep 17 00:00:00 2001
+From d3bf1c35a6cf5e2747a55a3a270504f0c8360bc4 Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
 Date: Fri, 23 Oct 2026 17:53:19 +0800
 Subject: [PATCH 1/3] qualcommax: add Swaiot M01MX CPE (IPQ8071A)
@@ -22,12 +22,12 @@ fuses (speed bin 0) - an IPQ8071A, previously misnamed IPQ8074.
 ---
  package/firmware/ipq-wifi/Makefile            |  10 +
  .../ipq-wifi/files/board-swaiot_m01mx.ipq8074 | Bin 0 -> 131176 bytes
- .../dts/ipq8071-swaiot-m01mx-cpe.dts          | 616 ++++++++++++++++++
+ .../dts/ipq8071-swaiot-m01mx-cpe.dts          | 615 ++++++++++++++++++
  target/linux/qualcommax/image/ipq807x.mk      |  16 +
  .../ipq807x/base-files/etc/board.d/02_network |   3 +
  .../etc/hotplug.d/firmware/11-ath11k-caldata  |   6 +
  .../base-files/lib/upgrade/platform.sh        |   1 +
- 7 files changed, 652 insertions(+)
+ 7 files changed, 651 insertions(+)
  create mode 100644 package/firmware/ipq-wifi/files/board-swaiot_m01mx.ipq8074
  create mode 100644 target/linux/qualcommax/dts/ipq8071-swaiot-m01mx-cpe.dts
 
@@ -265,10 +265,10 @@ HcmV?d00001
 
 diff --git a/target/linux/qualcommax/dts/ipq8071-swaiot-m01mx-cpe.dts b/target/linux/qualcommax/dts/ipq8071-swaiot-m01mx-cpe.dts
 new file mode 100644
-index 0000000000..efefd1dfd9
+index 0000000000..9802139a83
 --- /dev/null
 +++ b/target/linux/qualcommax/dts/ipq8071-swaiot-m01mx-cpe.dts
-@@ -0,0 +1,616 @@
+@@ -0,0 +1,615 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 +/* Copyright (c) 2025, Swaiot-M01MX-CPE */
 +
@@ -281,7 +281,6 @@ index 0000000000..efefd1dfd9
 +#include <dt-bindings/gpio/gpio.h>
 +#include <dt-bindings/input/input.h>
 +#include <dt-bindings/leds/common.h>
-+#include <dt-bindings/net/qcom-ipq-ess.h>
 +
 +/ {
 +	model = "Swaiot M01MX CPE";
