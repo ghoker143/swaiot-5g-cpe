@@ -1,15 +1,15 @@
-From 38e0c0652edbddccf27943673c8f3a679f7e74f1 Mon Sep 17 00:00:00 2001
+From 4ffe07d3eaf1a95afdf619f5680178adb7c60370 Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
-Date: Tue, 24 Mar 2026 19:47:29 +0800
-Subject: [PATCH] tools: build: fix missing ccache dependency
+Date: Fri, 23 Oct 2026 17:54:08 +0800
+Subject: [PATCH 3/3] tools: build: fix missing ccache dependency
 
-Conditionally-built host tools (like liblzo) lack dependency on ccache/compile, potentially leading to parallel build failures.
+Conditionally-built host tools lack dependency on ccache/compile, potentially leading to parallel build failures. (Rebased from the qosmio-based tree; the bug is still present here.)
 ---
  tools/Makefile | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/tools/Makefile b/tools/Makefile
-index 79d3954..69e6a0f 100644
+index 79d3954fef..69e6a0f579 100644
 --- a/tools/Makefile
 +++ b/tools/Makefile
 @@ -156,7 +156,7 @@ else
@@ -22,5 +22,5 @@ index 79d3954..69e6a0f 100644
  $(curdir)/xxhash/compile := $(curdir)/cmake/compile
  $(curdir)/ccache/compile := $(curdir)/xxhash/compile
 -- 
-2.53.0
+2.56.0
 

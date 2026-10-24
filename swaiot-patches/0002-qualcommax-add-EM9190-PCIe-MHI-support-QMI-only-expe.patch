@@ -1,48 +1,32 @@
-From 442012d7a73f41191925a2dc3807c679fb23a02d Mon Sep 17 00:00:00 2001
+From 53103b0e5db7154e93dcd52d9c16abfd1988edf8 Mon Sep 17 00:00:00 2001
 From: ghoker143 <ghoker51@protonmail.com>
-Date: Sun, 9 Aug 2026 14:00:00 +0800
-Subject: [PATCH 4/4] qualcommax: add EM9190 PCIe/MHI support (QMI-only)
+Date: Fri, 23 Oct 2026 17:54:08 +0800
+Subject: [PATCH 2/3] qualcommax: add EM9190 PCIe/MHI support (QMI-only)
+ [experimental]
 
-Sierra EM9190 modules with GENERIC firmware report the same PCI
-subsystem ID as Foxconn SDX55 (17cb:010c).  Bind that ID to a channel
-configuration derived from sierra-em919x (3 event rings, 4 MSI) to
-avoid the broken 5th MSI vector of the foxconn config on GICv2m
-platforms (e.g. IPQ807x), but with the MBIM control channels (12/13)
-removed.
+Rebased against 6.18 for the openwrt-ppe-nss base. The upstream
+foxconn_sdx55 binding for 17cb:010c and the MBIM channels in the
+stock sierra_em919x config are both still present in 6.18, so the
+rationale carries over unchanged.
 
-Rationale for dropping MBIM: on this firmware (SWIX55C_03.14.10.01),
-opening the MBIM channel makes the modem switch its QMI WDA data
-aggregation protocol to MBIM mode, persistent until the next modem
-reset.  ModemManager probes every wwan port, so it opens the MBIM port
-on every boot; a subsequent QMI connection attempt with the default
-multiplex=none then fails in ModemManager 1.24 with
-
-  Unsupported: Cannot disable multiplex support
-
-because MM's SET_DEFAULT short-circuit treats any non-QMAP aggregation
-value (including MBIM) as "multiplex already disabled" and skips the
-WDA sync, while the bearer connect check requires DAP == DISABLED.
-Not exposing the MBIM channel at the MHI level keeps the modem on the
-plain QMI/raw-ip path, which is verified to work with unpatched
-ModemManager.  It also avoids exercising the firmware's MBIM-over-MHI
-code path, which is suspected to cause random firmware crashes
-("mhi-pci-generic ... firmware crashed") on this unit.
-
-Signed-off-by: ghoker143 <ghoker51@protonmail.com>
+EXPERIMENTAL: re-validate on hardware against the stock foxconn
+binding, the plain sierra layout, and a userspace-only alternative
+(udev ID_MM_PORT_IGNORE on the MBIM wwan port). Drop or shrink this
+patch once that matrix is done.
 ---
- .../999-mhi-em9190-sierra-nombim.patch        | 69 ++++++++++++++++++++
- 1 file changed, 69 insertions(+)
- create mode 100644 target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
+ .../999-mhi-em9190-sierra-nombim.patch        | 70 +++++++++++++++++++
+ 1 file changed, 70 insertions(+)
+ create mode 100644 target/linux/qualcommax/patches-6.18/999-mhi-em9190-sierra-nombim.patch
 
-diff --git a/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
+diff --git a/target/linux/qualcommax/patches-6.18/999-mhi-em9190-sierra-nombim.patch b/target/linux/qualcommax/patches-6.18/999-mhi-em9190-sierra-nombim.patch
 new file mode 100644
-index 0000000000..442328ee60
+index 0000000000..cfc6ef7d67
 --- /dev/null
-+++ b/target/linux/qualcommax/patches-6.12/999-mhi-em9190-sierra-nombim.patch
-@@ -0,0 +1,69 @@
++++ b/target/linux/qualcommax/patches-6.18/999-mhi-em9190-sierra-nombim.patch
+@@ -0,0 +1,70 @@
 +--- a/drivers/bus/mhi/host/pci_generic.c
 ++++ b/drivers/bus/mhi/host/pci_generic.c
-+@@ -614,6 +614,51 @@
++@@ -747,6 +747,52 @@
 + 	.sideband_wake = false,
 + };
 + 
@@ -91,10 +75,11 @@ index 0000000000..442328ee60
 ++	.sideband_wake = false,
 ++};
 ++
+++
 + static const struct mhi_channel_config mhi_telit_fn980_hw_v1_channels[] = {
 + 	MHI_CHANNEL_CONFIG_UL(14, "QMI", 32, 0),
 + 	MHI_CHANNEL_CONFIG_DL(15, "QMI", 32, 0),
-+@@ -781,8 +826,13 @@
++@@ -906,8 +952,13 @@
 + 		.driver_data = (kernel_ulong_t) &mhi_telit_fn920c04_info },
 + 	{ PCI_DEVICE(PCI_VENDOR_ID_QCOM, 0x0304),
 + 		.driver_data = (kernel_ulong_t) &mhi_qcom_sdx24_info },
@@ -109,3 +94,6 @@ index 0000000000..442328ee60
 + 	/* EM919x (sdx55), use the same vid:pid as qcom-sdx55m */
 + 	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, 0x18d7, 0x0200),
 + 		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_info },
+-- 
+2.56.0
+

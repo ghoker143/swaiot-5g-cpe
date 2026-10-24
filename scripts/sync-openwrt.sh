@@ -60,12 +60,12 @@ write_repo_manifest() {
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CI_REPO_COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 CI_REPO_ORIGIN="$(git -C "$ROOT_DIR" remote get-url origin 2>/dev/null || printf '%s' 'N/A')"
-OPENWRT_REPO="${OPENWRT_REPO:-https://github.com/qosmio/openwrt-ipq}"
-OPENWRT_REF="${OPENWRT_REF:-main-nss}"
+OPENWRT_REPO="${OPENWRT_REPO:-https://github.com/JuliusBairaktaris/openwrt-ppe-nss}"
+OPENWRT_REF="${OPENWRT_REF:-ppe-nss}"
 OPENWRT_DIR="${OPENWRT_DIR:-$ROOT_DIR/workdir/openwrt}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-$ROOT_DIR/artifacts}"
 PATCH_DIR="$ROOT_DIR/swaiot-patches"
-SEED_CONFIG_REL="${SEED_CONFIG_REL:-nss-setup/config-nss.seed}"
+SEED_CONFIG_REL="${SEED_CONFIG_REL:-seeds/qualcommax-nss-wifi.seed}"
 DEVICE_CONFIG_FRAGMENT="${DEVICE_CONFIG_FRAGMENT:-$ROOT_DIR/configs/device.config}"
 EXTRA_CONFIG_FRAGMENT="${EXTRA_CONFIG_FRAGMENT:-$ROOT_DIR/configs/extra.config}"
 STATE_FILE="$OPENWRT_DIR/.swaiot-sync-state"
@@ -145,6 +145,9 @@ if [[ -d "$OPENWRT_DIR/feeds" || -e "$OPENWRT_DIR/feeds.conf" ]]; then
   log "Resetting feeds to a clean state"
   rm -rf "$OPENWRT_DIR/feeds" "$OPENWRT_DIR/package/feeds" "$OPENWRT_DIR/feeds.conf"
 fi
+
+log "Adding the NSS firmware feed"
+grep -q '^src-git nss ' "$OPENWRT_DIR/feeds.conf.default" || echo 'src-git nss https://github.com/JuliusBairaktaris/nss-packages.git;ppe-nss' >> "$OPENWRT_DIR/feeds.conf.default"
 
 log "Updating feeds"
 feeds_updated=0
