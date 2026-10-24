@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 720
     env:
-      OPENWRT_REPO: https://github.com/qosmio/openwrt-ipq
-      OPENWRT_REF: main-nss
+      OPENWRT_REPO: https://github.com/JuliusBairaktaris/openwrt-ppe-nss
+      OPENWRT_REF: ppe-nss
       OPENWRT_DIR: ${{ github.workspace }}/workdir/openwrt
       ARTIFACT_DIR: ${{ github.workspace }}/artifacts
 

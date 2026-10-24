@@ -2,14 +2,15 @@
 
 This repository contains the device-specific patch set, configuration, and CI workflow used to build OpenWrt images for a Swaiot 5G CPE based on Qualcomm IPQ807x.
 
-It is designed around the [`qosmio/openwrt-ipq`](https://github.com/qosmio/openwrt-ipq) `main-nss` branch and exists to add support for the Swaiot hardware on top of that upstream work.
+It is designed around the [`JuliusBairaktaris/openwrt-ppe-nss`](https://github.com/JuliusBairaktaris/openwrt-ppe-nss) `ppe-nss` branch (OpenWrt main, kernel 6.18: wired offload via the upstream `qca_ppe`/`qca_edma` drivers, Wi-Fi offload via `nss-wifi-drv`) and exists to add support for the Swaiot hardware on top of that work.
 
 ## Acknowledgements
 
 This project builds directly on the work of:
 
 - the OpenWrt project
-- [`qosmio/openwrt-ipq`](https://github.com/qosmio/openwrt-ipq), which provides the NSS-enabled Qualcomm IPQ807x/IPQ60xx OpenWrt base used here
+- [`qosmio/openwrt-ipq`](https://github.com/qosmio/openwrt-ipq), the NSS-enabled base this project was originally built on (dormant since June 2026)
+- [`JuliusBairaktaris/openwrt-ppe-nss`](https://github.com/JuliusBairaktaris/openwrt-ppe-nss) and its `nss-packages` feed, the maintained PPE+NSS base this repository now tracks
 - the maintainers and contributors of the OpenWrt feeds and packages involved in this build
 - Thomas Perrot and participants in the Sierra Wireless forum discussion on EM919x PCIe support, which helped highlight that EM9190/EM919x modules may appear with different PCI enumeration details across batches and hardware variants
 
@@ -21,13 +22,17 @@ The goal of this repository is simple: provide a reproducible way to build firmw
 
 The CI workflow does the following:
 
-1. Clones `qosmio/openwrt-ipq` from the `main-nss` branch.
+1. Clones `JuliusBairaktaris/openwrt-ppe-nss` and adds its NSS firmware feed, pinning the tree to the newest upstream commit the builder CI has published a release for (published = all device groups green, so broken tips are skipped automatically). OPENWRT_COMMIT overrides this.
 2. Applies the Swaiot-specific patch series from [`swaiot-patches/`](./swaiot-patches/).
 3. Copies the repository [`.config`](./.config) into the OpenWrt build tree.
 4. Updates and installs feeds.
 5. Runs `make defconfig`, downloads sources, and builds the firmware.
 
 If patch application fails against the latest upstream source, the daily build fails and no firmware artifact is produced for that run.
+
+## SoC Note
+
+The Swaiot M01MX hardware carries an **IPQ8071A** (quad A53, fuse-capped at 1.38 GHz per its speed bin). Earlier revisions of this repository misnamed it IPQ8074; the device tree now uses the `ipq8071-` prefix, while the SoC compatible remains `qcom,ipq8074`, which is the shared binding for all IPQ807x variants.
 
 ## Modem Notes
 
@@ -39,9 +44,11 @@ What may still be useful to others is the overall `ModemManager + QMI + raw-ip` 
 
 Note that the MHI channel configuration used here does not expose the modem's MBIM channels. On the EM9190 firmware batch in my unit (SWIX55C_03.14.10.01), opening the MBIM channel makes the modem switch its QMI WDA data aggregation to MBIM mode until the next modem reset, which breaks unpatched ModemManager QMI connections (`Cannot disable multiplex support`) and is suspected to cause random firmware crashes. Keeping the modem on the plain QMI/raw-ip path avoids both problems.
 
-## Important Note About `0004`
+These findings date from the old (qosmio, kernel 6.12, ModemManager 1.24) base and are marked experimental on the new one: the no-MBIM MHI patch (`0002`) must be re-validated on kernel 6.18 with a current ModemManager, against the stock Foxconn binding, the plain Sierra layout, and a userspace-only alternative (`udev` `ID_MM_PORT_IGNORE` on the MBIM wwan port).
 
-[`swaiot-patches/0004-qualcommax-add-support-for-Sierra-EM9190-via-PCIe-MH.patch`](./swaiot-patches/0004-qualcommax-add-support-for-Sierra-EM9190-via-PCIe-MH.patch) includes PCIe/MHI handling that matches my own EM9190 hardware batch.
+## Important Note About `0002`
+
+[`swaiot-patches/0002-qualcommax-add-EM9190-PCIe-MHI-support-QMI-only-expe.patch`](./swaiot-patches/) includes PCIe/MHI handling that matches my own EM9190 hardware batch.
 
 That part should be treated as **hardware-specific**, not as a universal EM9190 solution.
 
