@@ -22,7 +22,7 @@ The goal of this repository is simple: provide a reproducible way to build firmw
 
 The CI workflow does the following:
 
-1. Clones `JuliusBairaktaris/openwrt-ppe-nss` from the `ppe-nss` branch and adds its NSS firmware feed.
+1. Clones `JuliusBairaktaris/openwrt-ppe-nss` and adds its NSS firmware feed, pinning the tree to the newest upstream commit the builder CI has published a release for (published = all device groups green, so broken tips are skipped automatically). OPENWRT_COMMIT overrides this.
 2. Applies the Swaiot-specific patch series from [`swaiot-patches/`](./swaiot-patches/).
 3. Copies the repository [`.config`](./.config) into the OpenWrt build tree.
 4. Updates and installs feeds.

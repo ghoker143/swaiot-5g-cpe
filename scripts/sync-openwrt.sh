@@ -62,6 +62,10 @@ CI_REPO_COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 CI_REPO_ORIGIN="$(git -C "$ROOT_DIR" remote get-url origin 2>/dev/null || printf '%s' 'N/A')"
 OPENWRT_REPO="${OPENWRT_REPO:-https://github.com/JuliusBairaktaris/openwrt-ppe-nss}"
 OPENWRT_REF="${OPENWRT_REF:-ppe-nss}"
+OPENWRT_COMMIT="${OPENWRT_COMMIT:-}"
+GREEN_BASE_FALLBACK="2a1df1304caf159aae7181bf0dfdfc0bd7d6f2e2"
+BUILDER_RELEASES_API="https://api.github.com/repos/JuliusBairaktaris/Qualcommax_NSS_Builder/releases"
+
 OPENWRT_DIR="${OPENWRT_DIR:-$ROOT_DIR/workdir/openwrt}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-$ROOT_DIR/artifacts}"
 PATCH_DIR="$ROOT_DIR/swaiot-patches"
@@ -102,6 +106,33 @@ else
   log "Cloning $OPENWRT_REPO ($OPENWRT_REF)"
   rm -rf "$OPENWRT_DIR"
   git clone --branch "$OPENWRT_REF" --depth 1 "$OPENWRT_REPO" "$OPENWRT_DIR"
+fi
+resolve_green_base() {
+	curl -fsS --max-time 30 "$BUILDER_RELEASES_API?per_page=10" 2>/dev/null \
+		| jq -r '[.[] | select(.tag_name | startswith("ppe-nss-"))][0].body' 2>/dev/null \
+		| grep -oE '[0-9a-f]{40}' | head -n1
+}
+
+# Pick the build base: explicit OPENWRT_COMMIT wins; otherwise chase the
+# last upstream commit that the builder CI published a release for (a
+# published release means every device group built green, e.g. it skips
+# broken tips like the nss-wifi-drv regression in openwrt-ppe-nss #52).
+# Falls back to a known-good SHA when the probe fails.
+if [[ -z "$OPENWRT_COMMIT" ]]; then
+	OPENWRT_COMMIT="$(resolve_green_base || true)"
+	if [[ "${OPENWRT_COMMIT:-}" =~ ^[0-9a-f]{40}$ ]]; then
+		log "Auto-selected last-green upstream base: $OPENWRT_COMMIT"
+	else
+		OPENWRT_COMMIT="$GREEN_BASE_FALLBACK"
+		log "WARNING: green-base probe failed; falling back to $GREEN_BASE_FALLBACK"
+	fi
+fi
+if [[ -n "$OPENWRT_COMMIT" ]]; then
+	log "Pinning tree to commit $OPENWRT_COMMIT"
+	git -C "$OPENWRT_DIR" rev-parse --verify -q "$OPENWRT_COMMIT^{commit}" >/dev/null 2>&1 \
+		|| git -C "$OPENWRT_DIR" fetch --depth 1 origin "$OPENWRT_COMMIT"
+	git -C "$OPENWRT_DIR" reset --hard "$OPENWRT_COMMIT"
+	git -C "$OPENWRT_DIR" clean -ffd
 fi
 OPENWRT_BASE_COMMIT="$(git -C "$OPENWRT_DIR" rev-parse HEAD)"
 
